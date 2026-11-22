@@ -1,0 +1,14 @@
+# AirplaneMode app manifest. See the platform repo: docs/app-contract.md
+id: passport
+name: Passport
+description: A travel-themed deck-building card game for 2 to 4 players on the hotspot, with easy, normal and hard bots.
+image: ghcr.io/jessewolcott/airplanemode-passport
+port: 8000
+path: /passport/
+memory: 64m           # rooms and games live in memory (a few KB each, at most 200 rooms)
+needs:
+  llm: none
+env:
+  PASSPORT_BOT_DELAY: Seconds a bot waits before each move, as "min-max" (default 0.7-1.2).
+  PASSPORT_TAKEOVER: Seconds without hearing from a player before a bot covers their seat (default 60).
+  PASSPORT_ROOM_TTL: Seconds before an idle room is forgotten (default 7200).

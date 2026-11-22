@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+# Local "how it is built" notes for LLMs and engineers; not published.
+llm/

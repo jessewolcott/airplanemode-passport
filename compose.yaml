@@ -1,0 +1,12 @@
+# Standalone development:
+#   docker compose up -d --build      ->  http://localhost:8772
+# On the box, Passport runs from the airplanemode platform repo at /passport/.
+
+name: passport-dev
+
+services:
+  passport:
+    build: .
+    ports:
+      - "${PORT:-8772}:8000"
+    mem_limit: 64m

@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101624">
+<title>Passport</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root {
+  --bg: #0e1422; --bg2: #151d30; --panel: #1a2338; --line: #2a3550; --ink: #eef1f7; --dim: #9aa6bf;
+  --gold: #e3b955; --gold2: #f3d98f; --good: #6fcf8e; --bad: #ef6b5e;
+  --action: #2f5f9e; --attack: #b8423a; --reaction: #23857c; --currency: #3c7a4e;
+  --victory: #efe4c9; --negative: #5d4b74;
+  --r: 12px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); }
+body {
+  background:
+    radial-gradient(1200px 600px at 50% -200px, #1d2a48 0%, transparent 70%),
+    repeating-linear-gradient(45deg, rgba(255,255,255,.012) 0 2px, transparent 2px 6px),
+    var(--bg);
+  overscroll-behavior: none;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+.btn {
+  min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--panel); font-weight: 600; letter-spacing: .01em;
+}
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.primary { background: linear-gradient(180deg, var(--gold2), var(--gold)); color: #1b1607; border-color: #b58f35; }
+.btn.ghost { background: transparent; }
+.btn.small { min-height: 36px; padding: 0 12px; font-size: 14px; }
+input, select {
+  font: inherit; color: var(--ink); background: #0b111d; border: 1px solid var(--line);
+  border-radius: 10px; min-height: 44px; padding: 0 12px;
+}
+.hidden { display: none !important; }
+.muted { color: var(--dim); }
+h1, h2, h3 { margin: 0; }
+.screen { max-width: 980px; margin: 0 auto; padding: max(12px, env(safe-area-inset-top)) 14px 24px; }
+
+/* ---------- home ---------- */
+.brand { display: flex; align-items: center; gap: 14px; margin: 18px 0 8px; }
+.brand img { width: 64px; height: 64px; flex: none; }
+.brand h1 { font-family: Georgia, "Times New Roman", serif; font-size: 34px; letter-spacing: .18em; color: var(--gold2); text-transform: uppercase; }
+.brand p { margin: 2px 0 0; color: var(--dim); font-size: 14px; }
+.panel { background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.01)); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin: 12px 0; }
+.panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .14em; color: var(--gold); margin-bottom: 10px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.row > input { flex: 1 1 160px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.seg button { min-height: 40px; padding: 0 14px; background: transparent; border: 0; }
+.seg button.on { background: var(--gold); color: #1b1607; font-weight: 700; }
+.lobbies { display: grid; gap: 8px; }
+.lobbies button { display: flex; justify-content: space-between; align-items: center; text-align: left; min-height: 52px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line); background: #111a2b; }
+.code { font-family: ui-monospace, Consolas, monospace; letter-spacing: .2em; font-weight: 700; color: var(--gold2); }
+.sets { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.sets button { text-align: left; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: #111a2b; min-height: 64px; }
+.sets button.on { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.sets b { display: block; }
+.sets small { color: var(--dim); }
+
+/* ---------- lobby ---------- */
+.bigcode { font-size: 44px; text-align: center; margin: 6px 0 2px; }
+.seats { display: grid; gap: 8px; }
+.seat { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; background: #111a2b; border: 1px solid var(--line); min-height: 52px; }
+.seat .who { flex: 1; min-width: 0; }
+.badge { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; padding: 2px 7px; border-radius: 999px; background: #26324d; color: var(--dim); }
+.badge.gold { background: var(--gold); color: #1b1607; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: #111; flex: none; }
+
+/* ---------- cards ---------- */
+.card {
+  --c: var(--action); position: relative; border-radius: 10px; overflow: hidden; user-select: none;
+  background: var(--c); color: #fff; border: 1px solid rgba(255,255,255,.18);
+  box-shadow: 0 2px 6px rgba(0,0,0,.35); display: flex; flex-direction: column;
+}
+.card.t-action { --c: var(--action);
+  background: linear-gradient(90deg, transparent 0 calc(100% - 13px), rgba(0,0,0,.18) calc(100% - 13px)), var(--c); }
+.card.t-action::after { /* boarding-pass perforation */
+  content: ""; position: absolute; top: 4px; bottom: 4px; right: 12px; width: 2px;
+  background: radial-gradient(circle, rgba(255,255,255,.45) 1px, transparent 1.5px) 0 0 / 2px 6px repeat-y;
+}
+.card.t-attack { --c: var(--attack); }
+.card.t-reaction { --c: var(--reaction); }
+.card.t-currency {
+  --c: var(--currency);
+  background:
+    repeating-radial-gradient(circle at 80% 30%, rgba(255,255,255,.08) 0 1px, transparent 1px 5px),
+    linear-gradient(160deg, #4a9161, var(--c));
+}
+.card.c-goldcard { background: repeating-linear-gradient(115deg, rgba(255,255,255,.12) 0 2px, transparent 2px 9px), linear-gradient(160deg, #e9c766, #b98a25); color: #2a1e04; }
+.card.c-milescard { background: repeating-linear-gradient(115deg, rgba(255,255,255,.1) 0 2px, transparent 2px 9px), linear-gradient(160deg, #6c7d99, #3d4b66); }
+.card.t-victory {
+  --c: var(--victory); color: #2d2618;
+  background: repeating-linear-gradient(0deg, transparent 0 13px, rgba(80,60,20,.08) 13px 14px), var(--c);
+}
+.card.c-visa { background: linear-gradient(160deg, #f6e7b8, #dcc07a); }
+.card.t-negative { --c: var(--negative);
+  background: radial-gradient(circle at 75% 25%, rgba(255,255,255,.12) 0 12px, transparent 13px), var(--c); }
+.card .cost {
+  position: absolute; top: 4px; left: 4px; width: 22px; height: 22px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff4c7, #d6a73c 70%); color: #2a1e04;
+  font-weight: 800; font-size: 13px; display: grid; place-items: center; box-shadow: 0 1px 2px rgba(0,0,0,.4);
+}
+.card .nm { font-weight: 700; font-size: 12px; line-height: 1.1; padding: 6px 14px 0 30px; min-height: 30px; }
+.card .art { flex: 1; display: grid; place-items: center; opacity: .85; min-height: 0; }
+.card .art svg { width: 34px; height: 34px; }
+.card .tx { font-size: 11px; line-height: 1.25; padding: 0 8px 4px; }
+.card .ty { font-size: 9px; text-transform: uppercase; letter-spacing: .12em; padding: 3px 8px 5px; opacity: .8; }
+.card .left {
+  position: absolute; bottom: 4px; right: 4px; min-width: 22px; height: 20px; padding: 0 5px; border-radius: 10px;
+  background: rgba(0,0,0,.55); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center;
+}
+.card.t-victory .left { background: rgba(45,38,24,.75); }
+.card.stamp-vp::before { /* postage-stamp corner on victory cards */
+  content: attr(data-vp); position: absolute; top: 6px; right: 6px; width: 26px; height: 30px;
+  border: 2px dotted rgba(80,60,20,.55); border-radius: 3px; font: 800 13px Georgia, serif;
+  display: grid; place-items: center; color: #7a2f22; transform: rotate(4deg);
+}
+.card.empty { filter: grayscale(.9) brightness(.55); }
+.card.can-buy { outline: 2px solid var(--gold); outline-offset: 1px; }
+.card.mini { height: 112px; }
+.card.mini .tx { display: none; }
+.card.hand { width: 84px; height: 122px; flex: none; transition: transform .12s; }
+.card.hand .tx { display: none; }
+.card.hand.sel { transform: translateY(-12px); outline: 2px solid var(--gold2); }
+.card.hand.playable { box-shadow: 0 0 0 2px rgba(243,217,143,.45), 0 2px 6px rgba(0,0,0,.35); }
+.card.big { width: 220px; height: 310px; margin: 0 auto; }
+.card.big .nm { font-size: 18px; padding: 10px 16px 0 44px; min-height: 48px; }
+.card.big .cost { width: 32px; height: 32px; font-size: 18px; top: 8px; left: 8px; }
+.card.big .art svg { width: 72px; height: 72px; }
+.card.big .tx { font-size: 15px; padding: 0 16px 8px; }
+.card.big .ty { font-size: 11px; padding: 6px 16px 10px; }
+.card.big.stamp-vp::before { width: 36px; height: 42px; font-size: 18px; }
+.card.pickable { cursor: pointer; }
+/* compact cards (market, hand, in play, prompts): name across the top, cost bottom-left,
+   no type line (the colour and the glyph say it), the VP stamp above the count */
+.card.compact .nm { padding: 6px 15px 0 7px; font-size: 11.5px; min-height: 0; overflow-wrap: anywhere; hyphens: auto; }
+.card.compact .cost { top: auto; bottom: 4px; }
+.card.compact .ty, .card.compact .tx { display: none; }
+.card.compact.stamp-vp::before { top: auto; bottom: 28px; right: 5px; width: 22px; height: 26px; font-size: 12px; }
+.card.compact .art svg { width: 30px; height: 30px; }
+.card.picked { outline: 3px solid var(--gold2); outline-offset: 1px; transform: translateY(-6px); }
+
+/* ---------- game ---------- */
+#game { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; padding: 0; max-width: 980px; margin: 0 auto; }
+.topbar { display: flex; align-items: center; gap: 8px; padding: max(8px, env(safe-area-inset-top)) 10px 6px; }
+.topbar .code { font-size: 14px; }
+.topbar .sp { flex: 1; }
+.iconbtn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); display: grid; place-items: center; }
+.iconbtn svg { width: 20px; height: 20px; }
+.players { display: flex; gap: 6px; overflow-x: auto; padding: 0 10px 6px; scrollbar-width: none; }
+.pl { flex: 1 0 auto; min-width: 106px; padding: 6px 10px; border-radius: 12px; background: #121a2c; border: 1px solid var(--line); font-size: 12px; }
+.pl.turn { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.pl b { font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+.pl .vp { color: var(--gold2); font-weight: 700; }
+.pl .tag { font-size: 10px; color: var(--dim); }
+.phasebar { display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: #0b111d; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.steps { display: flex; gap: 2px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.steps span { padding: 6px 9px; border-radius: 8px; color: var(--dim); background: #141c2e; }
+.steps span.on { background: var(--gold); color: #1b1607; }
+.counters { margin-left: auto; display: flex; gap: 10px; font-size: 13px; }
+.counters b { font-size: 16px; }
+.counters .coin b { color: var(--gold2); }
+.status { padding: 6px 12px; font-size: 14px; min-height: 32px; }
+.status.mine { color: var(--gold2); font-weight: 600; }
+.main { flex: 1; overflow-y: auto; padding: 0 10px 8px; }
+.section-t { font-size: 11px; text-transform: uppercase; letter-spacing: .14em; color: var(--dim); margin: 10px 2px 6px; display: flex; justify-content: space-between; }
+.market { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
+.inplay { display: flex; gap: 6px; overflow-x: auto; min-height: 60px; padding: 2px 0; }
+.inplay .card { width: 74px; height: 96px; flex: none; }
+.inplay .card .art svg { width: 24px; height: 24px; }
+.inplay .card .nm { font-size: 10.5px; padding-right: 13px; }
+.inplay .empty-note { color: var(--dim); font-size: 13px; align-self: center; }
+.loglines { font-size: 13px; color: var(--dim); display: grid; gap: 2px; }
+.loglines .t { color: var(--gold); font-weight: 700; margin-top: 4px; }
+.loglines .e { color: var(--gold2); font-weight: 700; }
+.loglines b { color: var(--ink); font-weight: 600; }
+.dock { position: sticky; bottom: 0; background: linear-gradient(180deg, rgba(14,20,34,.85), #0e1422 30%); border-top: 1px solid var(--line); padding: 6px 0 max(8px, env(safe-area-inset-bottom)); }
+.hint { font-size: 13px; padding: 0 12px 6px; min-height: 22px; color: var(--dim); }
+.hint b { color: var(--ink); }
+.handrow { display: flex; gap: 6px; overflow-x: auto; padding: 14px 10px 6px; scrollbar-width: thin; }
+.dock .row { padding: 4px 10px 0; justify-content: flex-end; }
+.dock .row .btn { flex: 1 1 0; max-width: 220px; }
+
+/* ---------- sheets ---------- */
+.sheet-wrap { position: fixed; inset: 0; background: rgba(4,7,14,.6); display: flex; align-items: flex-end; justify-content: center; z-index: 20; }
+.sheet { width: 100%; max-width: 640px; max-height: 88vh; overflow-y: auto; background: var(--bg2); border: 1px solid var(--line); border-bottom: 0; border-radius: 20px 20px 0 0; padding: 16px 14px max(16px, env(safe-area-inset-bottom)); }
+.sheet h3 { font-size: 18px; margin-bottom: 6px; }
+.sheet .opts { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); margin: 12px 0; }
+.sheet .opts .card { height: 120px; }
+.sheet .choices { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; margin: 12px 0; }
+.sheet .choices .btn.on { background: var(--gold); color: #1b1607; }
+.sheet .row { justify-content: flex-end; }
+.sheet .from { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--gold); }
+.prose { font-size: 15px; line-height: 1.5; }
+.prose li { margin: 4px 0; }
+.ranking { display: grid; gap: 8px; margin: 10px 0; }
+.rank { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: #111a2b; }
+.rank.win { border-color: var(--gold); }
+.rank .top { display: flex; align-items: baseline; gap: 8px; }
+.rank .top b { font-size: 16px; flex: 1; }
+.rank .top .vp { font-size: 22px; font-weight: 800; color: var(--gold2); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.chip { font-size: 12px; padding: 3px 8px; border-radius: 999px; background: #222d45; }
+.toast { position: fixed; left: 50%; bottom: 180px; transform: translateX(-50%); background: #3a1d1d; border: 1px solid var(--bad); color: #ffd9d4; padding: 10px 14px; border-radius: 12px; z-index: 40; max-width: 90vw; }
+@keyframes pop { from { transform: translateY(8px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+.card.fresh { animation: pop .22s ease-out; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+@media (min-width: 760px) {
+  .market { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+  .card.mini { height: 128px; }
+  .card.hand { width: 96px; height: 138px; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="g-action" viewBox="0 0 48 48"><path fill="currentColor" d="M44 22c0-1.7-1.3-3-3-3H30L20 4h-5l5 15H11l-3-4H4l2 9-2 9h4l3-4h9l-5 15h5l10-15h11c1.7 0 3-1.3 3-3z"/></symbol>
+  <symbol id="g-attack" viewBox="0 0 48 48"><path fill="currentColor" d="M28 3L10 27h11l-4 18 21-26H26z"/></symbol>
+  <symbol id="g-reaction" viewBox="0 0 48 48"><path fill="currentColor" d="M24 3l17 6v13c0 11-7.5 19-17 23C14.5 41 7 33 7 22V9z"/><path fill="none" stroke="rgba(0,0,0,.35)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" d="M16 24l6 6 11-12"/></symbol>
+  <symbol id="g-currency" viewBox="0 0 48 48"><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" stroke-width="4"/><circle cx="24" cy="24" r="12" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3"/><path fill="currentColor" d="M22 14h4v20h-4z"/></symbol>
+  <symbol id="g-victory" viewBox="0 0 48 48"><circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="1.5"/><path fill="currentColor" d="M24 13l3.2 6.6 7.3 1-5.3 5.1 1.3 7.2L24 29.5l-6.5 3.4 1.3-7.2-5.3-5.1 7.3-1z"/></symbol>
+  <symbol id="g-negative" viewBox="0 0 48 48"><path fill="currentColor" d="M30 6a18 18 0 1 0 12 30A15 15 0 0 1 30 6z"/><path fill="currentColor" d="M34 8h8l-8 8h8M38 20h5l-5 5h5" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-log" viewBox="0 0 24 24"><path d="M6 4h12v16H6zM9 8h6M9 12h6M9 16h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+</svg>
+
+<!-- ============ home ============ -->
+<div id="home" class="screen hidden">
+  <div class="brand">
+    <img src="icon.svg" alt="" width="64" height="64">
+    <div><h1>Passport</h1><p>A deck-building card game for the trip. 2–4 players, phones on the hotspot, or bots.</p></div>
+  </div>
+  <div class="panel">
+    <h2>Your name</h2>
+    <div class="row"><input id="name" maxlength="20" placeholder="Traveller" autocomplete="nickname"></div>
+  </div>
+  <div id="resume" class="panel hidden">
+    <h2>Back to your game</h2>
+    <div class="row"><span class="muted" style="flex:1">Room <span class="code" id="resume-code"></span></span>
+      <button class="btn primary" id="resume-go">Rejoin</button></div>
+  </div>
+  <div class="panel">
+    <h2>Play vs bots</h2>
+    <div class="row" style="margin-bottom:10px">
+      <span class="muted">Bots</span>
+      <div class="seg" id="solo-n"><button data-v="1" class="on">1</button><button data-v="2">2</button><button data-v="3">3</button></div>
+      <span class="muted">Level</span>
+      <div class="seg" id="solo-level"><button data-v="easy">Easy</button><button data-v="normal" class="on">Normal</button><button data-v="hard">Hard</button></div>
+    </div>
+    <div class="sets" id="solo-sets"></div>
+    <div class="row" style="margin-top:12px"><button class="btn primary" id="solo-go" style="flex:1">Play vs bots</button></div>
+  </div>
+  <div class="panel">
+    <h2>Play with people here</h2>
+    <div class="row">
+      <button class="btn primary" id="host-go">Host a game</button>
+      <input id="join-code" maxlength="4" placeholder="CODE" style="text-transform:uppercase;max-width:120px;letter-spacing:.2em" autocomplete="off">
+      <button class="btn" id="join-go">Join</button>
+    </div>
+    <div class="section-t" style="margin-top:14px"><span>Games on this hotspot</span></div>
+    <div class="lobbies" id="lobbies"><span class="muted">None open right now.</span></div>
+  </div>
+  <div class="row" style="justify-content:center"><button class="btn ghost" data-help>How to play</button></div>
+</div>
+
+<!-- ============ lobby ============ -->
+<div id="lobby" class="screen hidden">
+  <div class="topbar" style="padding-left:0;padding-right:0">
+    <button class="btn small ghost" id="lobby-leave">← Leave</button><span class="sp"></span>
+    <button class="iconbtn" data-help aria-label="How to play"><svg><use href="#i-help"/></svg></button>
+  </div>
+  <div class="panel" style="text-align:center">
+    <h2>Room code</h2>
+    <div class="bigcode code" id="lobby-code"></div>
+    <div class="muted">Others on the hotspot: open Passport, then join this code (or pick it from the list).</div>
+  </div>
+  <div class="panel">
+    <h2>Players <span class="muted" id="lobby-count"></span></h2>
+    <div class="seats" id="seats"></div>
+    <div class="row" id="addbots" style="margin-top:10px">
+      <span class="muted">Add a bot:</span>
+      <button class="btn small" data-addbot="easy">Easy</button>
+      <button class="btn small" data-addbot="normal">Normal</button>
+      <button class="btn small" data-addbot="hard">Hard</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Card set</h2>
+    <div class="sets" id="lobby-sets"></div>
+    <div class="muted" id="lobby-setcards" style="font-size:13px;margin-top:8px"></div>
+  </div>
+  <div class="row"><button class="btn primary" id="lobby-start" style="flex:1">Start the trip</button></div>
+  <p class="muted" id="lobby-wait" style="text-align:center"></p>
+</div>
+
+<!-- ============ game ============ -->
+<div id="game" class="hidden">
+  <div class="topbar">
+    <span class="code" id="g-code"></span><span class="sp"></span>
+    <button class="iconbtn" id="g-log" aria-label="Move log"><svg><use href="#i-log"/></svg></button>
+    <button class="iconbtn" data-help aria-label="How to play"><svg><use href="#i-help"/></svg></button>
+    <button class="iconbtn" id="g-menu" aria-label="Menu"><svg><use href="#i-menu"/></svg></button>
+  </div>
+  <div class="players" id="g-players"></div>
+  <div class="phasebar">
+    <div class="steps" id="g-steps"><span data-p="action">Action</span><span data-p="buy">Buy</span><span data-p="cleanup">Clean up</span></div>
+    <div class="counters"><span>Actions <b id="g-actions">0</b></span><span>Buys <b id="g-buys">0</b></span><span class="coin">Coins <b id="g-coins">0</b></span></div>
+  </div>
+  <div class="status" id="g-status"></div>
+  <div class="main">
+    <div class="section-t"><span>In play</span><span id="g-trash"></span></div>
+    <div class="inplay" id="g-inplay"></div>
+    <div class="section-t"><span>Market</span><span id="g-mk-hint"></span></div>
+    <div class="market" id="g-kingdom"></div>
+    <div class="section-t"><span>Money & victory</span></div>
+    <div class="market" id="g-base"></div>
+    <div class="section-t"><span>Recent moves</span></div>
+    <div class="loglines" id="g-recent"></div>
+  </div>
+  <div class="dock">
+    <div class="hint" id="g-hint"></div>
+    <div class="handrow" id="g-hand"></div>
+    <div class="row">
+      <button class="btn" id="g-money">Play all money</button>
+      <button class="btn primary" id="g-end">End phase</button>
+    </div>
+  </div>
+</div>
+
+<div id="sheet" class="sheet-wrap hidden"><div class="sheet" id="sheet-body"></div></div>
+<div id="toast" class="toast hidden"></div>
+
+<script>
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem("passport." + k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem("passport." + k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem("passport." + k); } catch {} },
+};
+
+let CARDS = {}, PRESETS = [];
+const S = { code: null, token: null, st: null, version: 0, pollId: 0, sel: null, soloSet: "first", picked: [], sheet: null, seenLog: 0 };
+
+// ---------------- api ----------------
+async function api(path, data) {
+  const opt = data === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json", "X-Passport": "1" }, body: JSON.stringify(data) };
+  const r = await fetch(path, opt);
+  let j = {};
+  try { j = await r.json(); } catch {}
+  if (!r.ok) throw Object.assign(new Error(j.error || "Something went wrong."), { status: r.status });
+  return j;
+}
+let toastTimer;
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.remove("hidden");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add("hidden"), 3200);
+}
+const myName = () => ($("#name").value.trim() || "Traveller");
+
+// ---------------- cards ----------------
+function mainType(c) {
+  for (const t of ["negative", "attack", "reaction", "victory", "currency", "action"]) if (c.types.includes(t)) return t;
+  return "action";
+}
+function typeLabel(c) { return c.types.map(t => t[0].toUpperCase() + t.slice(1)).join(" · "); }
+function cardHTML(id, { cls = "", left = null, extra = "", attrs = "" } = {}) {
+  const c = CARDS[id]; if (!c) return "";
+  const mt = mainType(c);
+  const vp = c.types.includes("victory") || c.types.includes("negative");
+  const vpTxt = id === "scrapbook" ? "?" : c.vp;
+  return `<div class="card t-${mt} c-${id} ${vp ? "stamp-vp" : ""} ${cls}" data-id="${id}" data-vp="${vpTxt}" ${attrs}>
+    <div class="cost">${c.cost}</div><div class="nm">${esc(c.name)}</div>
+    <div class="art"><svg><use href="#g-${mt}"/></svg></div>
+    <div class="tx">${esc(c.text)}</div><div class="ty">${esc(typeLabel(c))}</div>
+    ${left !== null ? `<div class="left">${left}</div>` : ""}${extra}</div>`;
+}
+const typeRank = id => ({ action: 0, attack: 0, reaction: 0, currency: 1, victory: 2, negative: 3 })[mainType(CARDS[id])];
+const sortCards = ids => [...ids].sort((a, b) => typeRank(a) - typeRank(b) || CARDS[b].cost - CARDS[a].cost || CARDS[a].name.localeCompare(CARDS[b].name));
+
+// ---------------- screens ----------------
+function show(id) {
+  for (const s of ["home", "lobby", "game"]) $("#" + s).classList.toggle("hidden", s !== id);
+}
+
+function setsHTML(selected) {
+  return PRESETS.map(p => `<button data-set="${p.id}" class="${p.id === selected ? "on" : ""}"><b>${esc(p.name)}</b><small>${esc(p.blurb)}</small></button>`).join("");
+}
+
+async function goHome() {
+  stopPolling();
+  S.code = S.token = S.st = null; S.version = 0;
+  show("home"); closeSheet();
+  const saved = store.get("room");
+  $("#resume").classList.toggle("hidden", !saved);
+  if (saved) $("#resume-code").textContent = saved.code;
+  $("#solo-sets").innerHTML = setsHTML(S.soloSet);
+  refreshLobbies();
+}
+let lobbyTimer;
+async function refreshLobbies() {
+  clearTimeout(lobbyTimer);
+  if ($("#home").classList.contains("hidden")) return;
+  try {
+    const { rooms } = await api("api/rooms");
+    $("#lobbies").innerHTML = rooms.length ? rooms.map(r => `<button data-join="${r.code}"><span><b>${esc(r.host)}</b>'s game <span class="muted">· ${r.players}/4 · ${esc((PRESETS.find(p => p.id === r.kingdom) || {}).name || "")}</span></span><span class="code">${r.code}</span></button>`).join("")
+      : `<span class="muted">None open right now. Host one!</span>`;
+  } catch {}
+  lobbyTimer = setTimeout(refreshLobbies, 5000);
+}
+
+function enterRoom(code, token, st) {
+  S.code = code; S.token = token; S.version = 0; S.sel = null;
+  store.set("room", { code, token });
+  store.set("name", myName());
+  if (st) render(st);
+  startPolling();
+}
+
+// ---------------- polling ----------------
+function stopPolling() { S.pollId++; }
+async function startPolling() {
+  const id = ++S.pollId;
+  while (id === S.pollId) {
+    try {
+      const st = await api(`api/rooms/${S.code}/state?token=${encodeURIComponent(S.token)}&since=${S.version}`);
+      if (id !== S.pollId) return;
+      if (st.you === null || st.you === undefined) { store.del("room"); toast("You're no longer in that room."); goHome(); return; }
+      render(st);
+    } catch (e) {
+      if (id !== S.pollId) return;
+      if (e.status === 404) { store.del("room"); toast("That game has ended."); goHome(); return; }
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+}
+
+function render(st) {
+  if (st.version < S.version) return;
+  S.version = st.version; S.st = st;
+  if (st.state === "lobby") renderLobby(st); else renderGame(st);
+}
+
+// ---------------- lobby ----------------
+const COLORS = ["#e3b955", "#7cc4e8", "#e8857c", "#9be38a"];
+function renderLobby(st) {
+  show("lobby"); if (S.sheet && S.sheet !== "help") closeSheet();
+  $("#lobby-code").textContent = st.code;
+  $("#lobby-count").textContent = `(${st.seats.length}/4)`;
+  $("#seats").innerHTML = st.seats.map((s, i) => `<div class="seat">
+    <div class="avatar" style="background:${COLORS[i]}">${esc(s.name[0] || "?")}</div>
+    <div class="who"><b>${esc(s.name)}</b> ${s.you ? '<span class="badge gold">you</span>' : ""} ${s.host ? '<span class="badge">host</span>' : ""}</div>
+    ${s.bot ? (st.host ? `<select data-level="${i}" aria-label="Bot level">${["easy", "normal", "hard"].map(l => `<option ${l === s.bot ? "selected" : ""}>${l}</option>`).join("")}</select>
+      <button class="btn small ghost" data-remove="${i}" aria-label="Remove bot">✕</button>` : `<span class="badge">${s.bot} bot</span>`) : ""}
+  </div>`).join("");
+  $("#addbots").classList.toggle("hidden", !st.host || st.seats.length >= 4);
+  $("#lobby-sets").innerHTML = setsHTML(st.kingdom_choice);
+  $$("#lobby-sets button").forEach(b => b.disabled = !st.host);
+  const p = PRESETS.find(p => p.id === st.kingdom_choice);
+  $("#lobby-setcards").textContent = p && p.cards.length ? p.cards.map(id => CARDS[id].name).join(" · ") : "10 cards picked at random when the game starts.";
+  $("#lobby-start").classList.toggle("hidden", !st.host);
+  $("#lobby-start").disabled = st.seats.length < 2;
+  $("#lobby-start").textContent = st.seats.length < 2 ? "Add a bot or wait for a friend" : "Start the trip";
+  $("#lobby-wait").textContent = st.host ? "" : "Waiting for the host to start…";
+}
+
+// ---------------- game ----------------
+function renderGame(st) {
+  show("game");
+  const g = st.game, me = st.you;
+  const myTurn = g.current === me && !g.over;
+  const pend = g.pending;
+  const myDecision = pend && pend.player === me;
+  $("#g-code").textContent = st.code;
+
+  $("#g-players").innerHTML = g.players.map((p, i) => {
+    const seat = st.seats[i] || {};
+    const tags = [i === me ? "you" : "", seat.bot ? seat.bot + " bot" : "", seat.away ? "away · bot playing" : ""].filter(Boolean).join(" · ");
+    return `<div class="pl ${i === g.current && !g.over ? "turn" : ""}">
+      <b>${esc(p.name)}</b><span class="vp">${p.vp} VP</span> <span class="muted">· ${p.hand} in hand</span>
+      <div class="tag">deck ${p.deck} · discard ${p.discard} · ${p.owned} cards${tags ? " · " + esc(tags) : ""}</div></div>`;
+  }).join("");
+
+  $$("#g-steps span").forEach(s => s.classList.toggle("on", s.dataset.p === g.phase));
+  $("#g-actions").textContent = g.actions; $("#g-buys").textContent = g.buys; $("#g-coins").textContent = g.coins;
+
+  // status line
+  let status = "";
+  if (g.over) status = `The trip is over. <button class="btn small" id="g-results">Results</button>`;
+  else if (pend && !myDecision) status = `Waiting for ${g.players[pend.player].name}: ${pend.public}…`;
+  else if (myDecision) status = `Your choice: ${CARDS[pend.card].name}`;
+  else if (myTurn) status = g.phase === "action" ? "Your turn: play an action, or move on to buying." : "Your turn: play money, then buy.";
+  else status = `${g.players[g.current].name}'s turn (${g.phase}).`;
+  $("#g-status").innerHTML = g.over ? status : esc(status);
+  $("#g-status").classList.toggle("mine", myTurn || !!myDecision);
+
+  // in play
+  $("#g-inplay").innerHTML = g.in_play.length ? g.in_play.map(id => cardHTML(id, { cls: "compact" })).join("") : `<span class="empty-note">Nothing played yet this turn.</span>`;
+  $("#g-trash").textContent = g.trash_count ? `Trash: ${g.trash_count}` : "";
+
+  // market
+  const canBuy = myTurn && !pend && g.phase === "buy" && g.buys > 0;
+  const tile = id => {
+    const n = g.supply[id];
+    const cls = ["mini compact", n === 0 ? "empty" : "", canBuy && n > 0 && CARDS[id].cost <= g.coins ? "can-buy" : ""].join(" ");
+    return cardHTML(id, { cls, left: n, attrs: `data-market="${id}" role="button" tabindex="0"` });
+  };
+  $("#g-kingdom").innerHTML = g.kingdom.map(tile).join("");
+  $("#g-base").innerHTML = ["coins", "banknotes", "goldcard", "postcard", "stamp", "visa", "jetlag"].map(tile).join("");
+  $("#g-mk-hint").textContent = canBuy ? "Tap a card to buy" : "Tap a card to read it";
+
+  // log
+  const lines = g.log.slice(-8);
+  $("#g-recent").innerHTML = logHTML(lines, g);
+
+  // hand
+  const hand = sortCards(g.hand || []);
+  if (S.sel !== null && !hand.includes(S.sel)) S.sel = null;
+  $("#g-hand").innerHTML = hand.map(id => {
+    const c = CARDS[id];
+    const playable = myTurn && !pend && ((c.types.includes("action") && g.phase === "action" && g.actions > 0) || c.types.includes("currency"));
+    return cardHTML(id, { cls: `hand compact ${playable ? "playable" : ""} ${S.sel === id ? "sel" : ""}`, attrs: `data-hand="${id}" role="button" tabindex="0"` });
+  }).join("") || `<span class="muted" style="padding:20px">No cards in hand.</span>`;
+  renderHint();
+
+  const hasMoney = hand.some(id => CARDS[id].types.includes("currency"));
+  $("#g-money").disabled = !(myTurn && !pend && hasMoney);
+  $("#g-end").disabled = !(myTurn && !pend);
+  $("#g-end").textContent = g.phase === "action" ? "End actions" : "End turn";
+
+  // sheets
+  if (g.over) {
+    if (S.overShown !== st.code + st.game_no) { S.overShown = st.code + st.game_no; openOver(st); }
+    else if (S.sheet === "over") openOver(st);
+  }
+  else if (myDecision) { if (S.sheet !== "dec:" + pend.id) openDecision(pend, g); }
+  else if (S.sheet && (S.sheet.startsWith("dec:") || S.sheet === "over")) closeSheet();
+}
+
+function logHTML(lines, g) {
+  return lines.map(e => {
+    const who = e.p !== null && e.p !== undefined ? `<b>${esc(g.players[e.p].name)}</b> ` : "";
+    if (e.k === "turn") return `<div class="t">${esc(g.players[e.p].name)} · ${esc(e.t)}</div>`;
+    if (e.k === "end") return `<div class="e">${esc(e.t)}</div>`;
+    return `<div>${who}${esc(e.t)}</div>`;
+  }).join("");
+}
+
+function renderHint() {
+  const st = S.st; if (!st || !st.game) return;
+  const g = st.game;
+  if (S.sel) {
+    const c = CARDS[S.sel];
+    const myTurn = g.current === st.you && !g.pending;
+    const playable = myTurn && ((c.types.includes("action") && g.phase === "action" && g.actions > 0) || c.types.includes("currency"));
+    $("#g-hint").innerHTML = `<b>${esc(c.name)}</b>: ${esc(c.text)} ${playable ? '<span style="color:var(--gold2)">Tap again to play.</span>' : ""}`;
+  } else {
+    $("#g-hint").innerHTML = g.hand && g.hand.length ? "Your hand. Tap a card to read it, tap again to play it." : "";
+  }
+}
+
+// ---------------- sheets ----------------
+function openSheet(kind, html) {
+  S.sheet = kind;
+  $("#sheet-body").innerHTML = html;
+  $("#sheet").classList.remove("hidden");
+}
+function closeSheet() { S.sheet = null; $("#sheet").classList.add("hidden"); S.picked = []; }
+$("#sheet").addEventListener("click", e => {
+  if (e.target.id === "sheet" && S.sheet && !S.sheet.startsWith("dec:") && S.sheet !== "over") closeSheet();
+});
+
+function openCard(id) {
+  const st = S.st, g = st && st.game;
+  let buy = "";
+  if (g && !$("#game").classList.contains("hidden")) {
+    const myTurn = g.current === st.you && !g.pending && !g.over;
+    const n = g.supply[id];
+    if (myTurn && n !== undefined) {
+      const ok = n > 0 && g.buys > 0 && CARDS[id].cost <= g.coins;
+      const why = n === 0 ? "None left." : g.buys < 1 ? "No buys left." : CARDS[id].cost > g.coins ? `You have ${g.coins} coin${g.coins === 1 ? "" : "s"}.` : "";
+      buy = `<button class="btn primary" data-buy="${id}" ${ok ? "" : "disabled"}>Buy for ${CARDS[id].cost}</button>${why ? `<span class="muted">${why}</span>` : ""}`;
+    }
+  }
+  const n = g && g.supply[id] !== undefined ? `<p class="muted" style="text-align:center">${g.supply[id]} left in the market</p>` : "";
+  openSheet("card", `${cardHTML(id, { cls: "big" })}${n}<div class="row" style="justify-content:center;margin-top:12px">${buy}<button class="btn ghost" data-close>Close</button></div>`);
+}
+
+function openDecision(d, g) {
+  S.picked = [];
+  const src = CARDS[d.card] ? CARDS[d.card].name : "";
+  let body = `<div class="from">${esc(src)}</div><h3>${esc(d.prompt)}</h3>`;
+  if (d.kind === "select") {
+    body += `<p class="muted">${d.min === d.max ? `Pick ${d.min}.` : `Pick ${d.min ? d.min + " to " : "up to "}${d.max}.`}</p>
+      <div class="opts">${d.options.map((id, i) => cardHTML(id, { cls: "pickable compact", attrs: `data-pick="${i}" role="button" tabindex="0"` })).join("")}</div>
+      <div class="row"><button class="btn primary" id="dec-ok">Confirm</button></div>`;
+  } else if (d.kind === "gain") {
+    body += `<div class="opts">${d.options.map(id => cardHTML(id, { cls: "pickable compact", left: g.supply[id], attrs: `data-gain="${id}" role="button" tabindex="0"` })).join("")}</div>`;
+  } else if (d.kind === "yesno") {
+    const yes = d.card === "insurance" ? "Show it" : "Yes", no = d.card === "insurance" ? "No" : "No, keep it";
+    body += (d.show && d.show.length ? `<div class="opts" style="grid-template-columns:repeat(auto-fill,110px);justify-content:center">${d.show.map(id => cardHTML(id)).join("")}</div>` : "")
+      + `<div class="choices"><button class="btn" data-yn="0">${no}</button><button class="btn primary" data-yn="1">${yes}</button></div>`;
+  } else if (d.kind === "choose") {
+    body += `<div class="choices">${d.options.map(o => `<button class="btn" data-choose="${esc(o.id)}">${esc(o.label)}</button>`).join("")}</div>
+      <div class="row"><button class="btn primary" id="dec-ok">Confirm</button></div>`;
+  }
+  openSheet("dec:" + d.id, body);
+  updatePickButton(d);
+}
+function updatePickButton(d) {
+  const b = $("#dec-ok"); if (!b) return;
+  const n = S.picked.length;
+  b.disabled = !(n >= d.min && n <= d.max);
+  b.textContent = d.kind === "select" ? (n ? `Confirm (${n})` : (d.min === 0 ? "None" : "Confirm")) : "Confirm";
+}
+async function answer(value) {
+  const d = S.st.game.pending;
+  closeSheet();
+  await send({ type: "answer", id: d.id, value });
+}
+
+function openOver(st) {
+  const r = st.game.result; if (!r) return;
+  const rows = r.ranking.map(x => `<div class="rank ${r.winners.includes(x.player) ? "win" : ""}">
+    <div class="top"><b>${esc(x.name)}${x.player === st.you ? " (you)" : ""}</b><span class="muted">${x.turns} turns · ${x.cards} cards</span><span class="vp">${x.vp}</span></div>
+    <div class="chips">${x.breakdown.map(b => `<span class="chip">${esc(CARDS[b.card].name)} ×${b.count} = ${b.vp > 0 ? "+" : ""}${b.vp}</span>`).join("") || '<span class="chip">no VP cards</span>'}</div></div>`).join("");
+  const won = r.winners.includes(st.you);
+  openSheet("over", `<div class="from">Trip's over</div><h3>${won ? (r.winners.length > 1 ? "You share the win!" : "You win!") : esc(r.winners.map(w => st.game.players[w].name).join(" & ")) + (r.winners.length > 1 ? " share the win" : " wins")}</h3>
+    <p class="muted">${esc(r.reason)} Ties go to whoever took fewer turns.</p><div class="ranking">${rows}</div>
+    <div class="choices" style="grid-template-columns:1fr 1fr 1fr"><button class="btn ghost" data-close>Table</button><button class="btn" id="over-leave">Leave</button><button class="btn primary" id="over-rematch">Rematch</button></div>`);
+}
+
+function openLog() {
+  const g = S.st.game;
+  openSheet("log", `<h3>Moves</h3><div class="loglines" style="margin:10px 0">${logHTML(g.log, g)}</div>
+    ${g.hand ? `<p class="muted" style="font-size:13px">Your cards: ${esc(g.deck_list)}</p>` : ""}
+    ${g.trash ? `<p class="muted" style="font-size:13px">Trash: ${esc(g.trash)}</p>` : ""}
+    <div class="row"><button class="btn" data-close>Close</button></div>`);
+  const s = $("#sheet .sheet"); s.scrollTop = s.scrollHeight;
+}
+
+function openMenu() {
+  const over = S.st.game.over;
+  openSheet("menu", `<h3>Room <span class="code">${esc(S.code)}</span></h3>
+    <p class="muted">${over ? "" : "If you leave, a bot plays your seat. Come back with the same browser to take it over again."}</p>
+    <div class="row"><button class="btn" data-close>Back to the game</button><button class="btn" id="menu-leave">Leave the game</button></div>`);
+}
+
+function openHelp() {
+  openSheet("help", `<div class="from">How to play</div><h3>Build the best deck for the trip</h3>
+  <div class="prose"><ol>
+    <li><b>Your deck.</b> Everyone starts with 10 cards: 7 <i>Coins</i> and 3 <i>Postcards</i>. Each turn you hold 5.</li>
+    <li><b>Action.</b> Play one action card (blue). Some give you more actions, cards, buys or coins.</li>
+    <li><b>Buy.</b> Play your money (green), then buy one card from the market. It goes on your discard pile.</li>
+    <li><b>Clean up.</b> Everything you played or held is discarded, and you draw 5 new cards. When your deck runs out, your discard pile is shuffled into a new deck, so the cards you bought start showing up.</li>
+    <li><b>Points.</b> Postcards (1), Passport Stamps (3) and Visas (6) score, but do nothing in your hand. Buy money and actions early, points late.</li>
+    <li><b>The end.</b> When the Visas run out, or any three market piles are empty, the trip ends after that turn. Most VP wins; a tie goes to whoever took fewer turns.</li>
+  </ol>
+  <p><b>Attacks</b> (red) hit everyone else: discard cards, catch <i>Jet Lag</i> (−1 VP) or lose money. <b>Travel Insurance</b> (teal) in your hand blocks them. <b>Trashing</b> removes weak cards from your deck for good, which makes your good cards come up more often.</p>
+  <p class="muted">Tip: tap any card in the market to read it. Tap a card in your hand to read it, tap again to play it.</p></div>
+  <div class="row"><button class="btn primary" data-close>Got it</button></div>`);
+}
+
+// ---------------- moves ----------------
+let sending = false;
+async function send(intent) {
+  if (sending) return;
+  sending = true;
+  try { render(await api(`api/rooms/${S.code}/act`, { token: S.token, intent })); }
+  catch (e) { toast(e.message); if (S.st && S.st.game) { S.sheet = null; renderGame(S.st); } }
+  finally { sending = false; }
+}
+async function post(path, extra = {}) {
+  try { const st = await api(`api/rooms/${S.code}/${path}`, { token: S.token, ...extra }); if (st && st.code) render(st); return st; }
+  catch (e) { toast(e.message); }
+}
+
+// ---------------- events ----------------
+document.addEventListener("click", async e => {
+  const t = e.target.closest("button, [role=button]");
+  if (!t) return;
+  if (t.matches("[data-help]")) return openHelp();
+  if (t.matches("[data-close]")) return closeSheet();
+  if (t.dataset.join) { $("#join-code").value = t.dataset.join; return join(t.dataset.join); }
+  if (t.dataset.set !== undefined) {
+    if (t.closest("#solo-sets")) { S.soloSet = t.dataset.set; $("#solo-sets").innerHTML = setsHTML(S.soloSet); }
+    else post("lobby", { op: "kingdom", kingdom: t.dataset.set });
+    return;
+  }
+  if (t.closest(".seg") && t.dataset.v) { $$("button", t.closest(".seg")).forEach(b => b.classList.toggle("on", b === t)); return; }
+  if (t.dataset.addbot) return post("lobby", { op: "add_bot", level: t.dataset.addbot });
+  if (t.dataset.remove !== undefined) return post("lobby", { op: "remove", seat: +t.dataset.remove });
+  if (t.dataset.market) return openCard(t.dataset.market);
+  if (t.dataset.buy) { closeSheet(); return send({ type: "buy", card: t.dataset.buy }); }
+  if (t.dataset.hand) {
+    const id = t.dataset.hand, g = S.st.game;
+    if (S.sel === id) {
+      const c = CARDS[id], myTurn = g.current === S.st.you && !g.pending;
+      const playable = myTurn && ((c.types.includes("action") && g.phase === "action" && g.actions > 0) || c.types.includes("currency"));
+      if (playable) { S.sel = null; return send({ type: "play", card: id }); }
+      S.sel = null;
+    } else S.sel = id;
+    $$("#g-hand .card").forEach(el => el.classList.toggle("sel", el.dataset.hand === S.sel));
+    return renderHint();
+  }
+  if (t.dataset.pick !== undefined) {
+    const d = S.st.game.pending, i = +t.dataset.pick;
+    if (S.picked.includes(i)) S.picked = S.picked.filter(x => x !== i);
+    else if (d.max === 1) S.picked = [i];
+    else if (S.picked.length < d.max) S.picked.push(i);
+    $$("[data-pick]").forEach(el => el.classList.toggle("picked", S.picked.includes(+el.dataset.pick)));
+    if (d.min === 1 && d.max === 1 && S.picked.length === 1) return answer([d.options[i]]);
+    return updatePickButton(d);
+  }
+  if (t.dataset.gain) return answer(t.dataset.gain);
+  if (t.dataset.yn !== undefined) return answer(t.dataset.yn === "1");
+  if (t.dataset.choose) {
+    const d = S.st.game.pending, id = t.dataset.choose;
+    if (S.picked.includes(id)) S.picked = S.picked.filter(x => x !== id);
+    else if (S.picked.length < d.max) S.picked.push(id);
+    $$("[data-choose]").forEach(el => el.classList.toggle("on", S.picked.includes(el.dataset.choose)));
+    return updatePickButton(d);
+  }
+  switch (t.id) {
+    case "dec-ok": {
+      const d = S.st.game.pending;
+      return answer(d.kind === "select" ? S.picked.map(i => d.options[i]) : S.picked);
+    }
+    case "g-money": return send({ type: "play_money" });
+    case "g-end": return send({ type: "end_phase" });
+    case "g-log": return openLog();
+    case "g-results": return openOver(S.st);
+    case "g-menu": return openMenu();
+    case "menu-leave": case "over-leave": case "lobby-leave":
+      await post("leave"); store.del("room"); return goHome();
+    case "over-rematch": closeSheet(); S.sheet = null; return post("rematch");
+    case "lobby-start": return post("start");
+    case "solo-go": return createRoom(true);
+    case "host-go": return createRoom(false);
+    case "join-go": return join($("#join-code").value);
+    case "resume-go": { const s = store.get("room"); if (s) return join(s.code, s.token); return; }
+  }
+});
+document.addEventListener("change", e => {
+  if (e.target.dataset.level !== undefined) post("lobby", { op: "bot_level", seat: +e.target.dataset.level, level: e.target.value });
+  if (e.target.id === "name") store.set("name", myName());
+});
+document.addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches("[role=button]")) { e.preventDefault(); e.target.click(); }
+  if (e.key === "Escape" && S.sheet && !S.sheet.startsWith("dec:") && S.sheet !== "over") closeSheet();
+  if (e.key === "Enter" && e.target.id === "join-code") join(e.target.value);
+});
+
+async function createRoom(solo) {
+  const level = $("#solo-level .on").dataset.v, n = +$("#solo-n .on").dataset.v;
+  try {
+    const body = solo ? { name: myName(), bots: Array(n).fill(level), kingdom: S.soloSet, start: true } : { name: myName() };
+    const r = await api("api/rooms", body);
+    enterRoom(r.code, r.token, r.state);
+  } catch (e) { toast(e.message); }
+}
+async function join(code, token) {
+  code = String(code || "").trim().toUpperCase();
+  if (!/^[A-Z]{4}$/.test(code)) return toast("Codes are 4 letters.");
+  try {
+    const saved = store.get("room");
+    token = token || (saved && saved.code === code ? saved.token : undefined);
+    const r = await api(`api/rooms/${code}/join`, { name: myName(), token });
+    enterRoom(code, r.token, r.state);
+  } catch (e) {
+    if (token && e.status === 404) store.del("room");
+    toast(e.message);
+  }
+}
+
+// ---------------- start ----------------
+(async function boot() {
+  $("#name").value = store.get("name") || "";
+  try { const d = await api("api/cards"); CARDS = d.cards; PRESETS = d.presets; }
+  catch { toast("Can't reach Passport. Retrying…"); setTimeout(boot, 3000); return; }
+  const m = location.hash.match(/^#([A-Za-z]{4})$/);
+  if (m) $("#join-code").value = m[1].toUpperCase();
+  const saved = store.get("room");
+  if (saved) {
+    try { const st = await api(`api/rooms/${saved.code}/state?token=${encodeURIComponent(saved.token)}&since=0`);
+      if (st.you !== null && st.you !== undefined) { enterRoom(saved.code, saved.token, st); return; } } catch {}
+    store.del("room");
+  }
+  goHome();
+})();
+document.addEventListener("visibilitychange", () => { if (!document.hidden && S.code) startPolling(); });
+</script>
+</body>
+</html>
