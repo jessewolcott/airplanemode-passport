@@ -6,9 +6,12 @@ An [AirplaneMode](https://github.com/jessewolcott/airplanemode) app. Passport is
 for 2 to 4 players: everyone on the router's hotspot plays from their own phone, with bots
 filling empty seats (or a whole table of bots, to play alone). No internet, no accounts.
 
-Screenshots: to come.
+<p align="center">
+  <img src="docs/screenshots/home.png" width="230" alt="Home: play vs bots, pick a card set, or host a game">
+  <img src="docs/screenshots/table.png" width="230" alt="A turn: the market, your hand and the phase bar">
+</p>
 
-<sub>Not yet tested on real hardware or real phones. Played through in a desktop browser (phone-sized window) against bots; people-vs-people is covered by the API tests.</sub>
+<sub>Screenshots from a laptop browser at phone size. Not yet tested on real hardware or real phones. Played through in a desktop browser (phone-sized window) against bots; people-vs-people is covered by the API tests.</sub>
 
 ## How to play
 

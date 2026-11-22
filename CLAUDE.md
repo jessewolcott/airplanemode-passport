@@ -52,4 +52,4 @@ Local tests: `.venv` with Python 3.10 (`fastapi==0.115.6 uvicorn==0.34.0 httpx==
 ## Releasing
 
 Push a `vX.Y.Z` tag. CI tests, then publishes `ghcr.io/jessewolcott/airplanemode-passport:X.Y.Z`
-(arm64 + amd64). **Ask Jesse before pushing a release tag.** Not released yet.
+(arm64 + amd64). **Ask Jesse before pushing a release tag.** Released: 0.1.0 (pinned in the platform's `compose.yaml`).
