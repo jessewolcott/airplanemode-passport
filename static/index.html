@@ -139,7 +139,7 @@ h1, h2, h3 { margin: 0; }
 .card.pickable { cursor: pointer; }
 /* compact cards (market, hand, in play, prompts): name across the top, cost bottom-left,
    no type line (the colour and the glyph say it), the VP stamp above the count */
-.card.compact .nm { padding: 6px 15px 0 7px; font-size: 11.5px; min-height: 0; overflow-wrap: anywhere; hyphens: auto; }
+.card.compact .nm { padding: 6px 15px 0 7px; font-size: 11px; min-height: 0; overflow-wrap: break-word; hyphens: manual; letter-spacing: -0.01em; }
 .card.compact .cost { top: auto; bottom: 4px; }
 .card.compact .ty, .card.compact .tx { display: none; }
 .card.compact.stamp-vp::before { top: auto; bottom: 28px; right: 5px; width: 22px; height: 26px; font-size: 12px; }
