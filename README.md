@@ -22,13 +22,17 @@ filling empty seats (or a whole table of bots, to play alone). No internet, no a
   out, your discard pile is shuffled into a new one, so what you bought starts to show up.
 - **Points:** Postcard 1 VP, Passport Stamp 3, Visa 6. They do nothing in your hand, so buy
   money and actions first, points later. Attacks hand out **Jet Lag** (-1 VP).
-- **The end:** when the Visas run out or any three piles are empty, at the end of that turn.
+- **The end:** when the Visas run out or any three market piles are empty (the Jet Lag pile
+  counts too), at the end of that turn.
   Most VP wins; a tie goes to whoever took fewer turns, otherwise it's shared. (A safety net
   ends a stalled game after 60 rounds.)
 
 Each game uses 10 of the 24 kingdom cards: a named set chosen in the lobby (**First trip**:
 gentle, no attacks; **Business class**; **Backpacker**) or 10 at random. The page has a
 "How to play" overlay, and every card can be tapped to read it.
+
+Jet Lag is a market pile that costs 0, so it can be bought, and cards that gain "a card costing
+up to N" (Souvenir Shop, Seat Upgrade) may gain it; that's rarely a good idea, but it's allowed.
 
 Pile sizes: 8 of each victory card with 2 players, 12 with 3-4; Jet Lag 10 per opponent;
 10 of each kingdom card; Coins 60 minus the starting ones, Banknotes 40, Gold Cards 30.
@@ -69,9 +73,19 @@ Money: **Coins** (cost 0, +1), **Banknotes** (3, +2), **Gold Card** (6, +3).
 - **Play vs bots:** one tap, 1-3 bots (easy, normal or hard) and a card set.
 - **Host a game:** you get a 4-letter code. Others open Passport and join it, or pick it from
   "Games on this hotspot". The host adds bots, picks the card set and starts.
-- Your seat is kept in your browser: a refresh or a locked phone puts you back in it. If you
-  leave, or stop responding for a minute while the game waits on you, a bot plays your seat
-  until you come back. If everyone is away, the game pauses.
+- Your seat is kept in your browser: a refresh or a locked phone puts you back in it.
+- **Leaving** a game hands your seat to a bot at once. It stays a bot's until you join the
+  same code again from the same browser; if the table starts a rematch first, your seat
+  becomes a bot for good.
+- **Away:** your phone checks in all the time while Passport is open. After 60 seconds with
+  no word from it (locked phone, closed tab, lost Wi-Fi), at any point in the game, you count
+  as away. While you're away, a bot moves for you whenever the game waits on your seat (your
+  turn, or a question an attack asks you); your next check-in gives the seat back.
+- Seats taken over this way are played by a **normal** bot, whatever level the room's bots are.
+  If every person is away or gone, the game pauses.
+- **Watching:** anyone on the hotspot who knows a room's code can open its state without a
+  seat and see the table as a spectator (the market, the log, counts and scores), never
+  anyone's hand or private choices.
 - **Rematch** after a game keeps the room and the players.
 
 Bots: **easy** buys money (and now and then something random), **normal** plays "big money"

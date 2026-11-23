@@ -12,3 +12,4 @@ env:
   PASSPORT_BOT_DELAY: Seconds a bot waits before each move, as "min-max" (default 0.7-1.2).
   PASSPORT_TAKEOVER: Seconds without hearing from a player before a bot covers their seat (default 60).
   PASSPORT_ROOM_TTL: Seconds before an idle room is forgotten (default 7200).
+  PASSPORT_POLL: Seconds a state request (long-poll) waits for a change before it returns (default 20).

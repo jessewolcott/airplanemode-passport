@@ -3,6 +3,7 @@ import os
 import random
 import re
 import sys
+import threading
 import time
 from collections import Counter
 from pathlib import Path
@@ -404,6 +405,76 @@ def test_views_hide_other_hands():
     assert "hand" not in g.view(None)
 
 
+def names_in(text):
+    """Card ids whose names appear in a log line (longest names first, so none hides inside another)."""
+    found = set()
+    for cid in sorted(CARDS, key=lambda c: -len(CARDS[c].name)):
+        if CARDS[cid].name in text:
+            found.add(cid)
+            text = text.replace(CARDS[cid].name, "")
+    return found
+
+
+def test_log_and_public_view_never_leak_hidden_cards():
+    """Every step of many games: each viewer's view is the public view plus only their own hand and
+    their own decision's details, and a log line names only cards that became public in that step
+    (played, bought or gained, trashed, discarded, revealed) or that are in play."""
+    private = {"prompt", "options", "min", "max", "show"}
+    seen_cards = set()
+    for s in range(40):
+        rng = random.Random(500 + s)
+        n = 2 + s % 3
+        g = Game([f"R{i}" for i in range(n)], pick_kingdom(ALL_SETS[s % 4], rng), seed=500 + s, round_limit=20)
+        bots = {i: Bot(LEVELS[(s + i) % 3], seed=s * 10 + i) for i in range(n)}
+        last = g.log_n
+        while not g.over:
+            who = g.waiting_on()
+            before = ([Counter(p.play) for p in g.players], [Counter(p.discard) for p in g.players],
+                      [Counter(p.hand) for p in g.players], Counter(g.trash), dict(g.supply))
+            if g.pending and rng.random() < 0.5:
+                g.act(who, {"type": "answer", "id": g.pending.id, "value": random_answer(g.pending, rng)})
+            elif not g.pending and rng.random() < 0.3:
+                p = g.players[who]
+                moves = [{"type": "end_phase"}]
+                moves += [{"type": "play", "card": c} for c in p.hand
+                          if (CARDS[c].is_("action") and g.phase == "action" and g.actions) or CARDS[c].is_("currency")]
+                moves += [{"type": "buy", "card": c} for c, k in g.supply.items()
+                          if k and CARDS[c].cost <= g.coins and g.buys]
+                g.act(who, rng.choice(moves))
+            else:
+                g.act(who, bots[who].move(g, who))
+            visible = set(+(Counter(g.trash) - before[3]))
+            visible |= {c for c, k in g.supply.items() if k < before[4][c]}
+            for i, p in enumerate(g.players):
+                now = Counter(p.discard)          # after a reshuffle, the whole discard pile is new
+                visible |= set(now if before[1][i] - now else now - before[1][i])
+                visible |= set(Counter(p.play) - before[0][i]) | set(p.play)
+            for line in g.log:
+                if line["n"] <= last or line["k"] == "end":
+                    continue
+                allowed = set(visible)
+                if line["t"].startswith("shows Travel Insurance"):
+                    allowed.add("insurance")
+                if re.fullmatch(r"turns over .+ and keeps it", line["t"]):     # a public reveal
+                    allowed |= set(Counter(g.players[line["p"]].hand) - before[2][line["p"]])
+                named = names_in(line["t"])
+                seen_cards |= named
+                assert named <= allowed, (line, named - allowed)
+            last = g.log_n
+            public = g.view(None)
+            assert "hand" not in public and "deck_list" not in public
+            assert public["pending"] is None or not private & set(public["pending"])
+            for v in range(n):
+                mine = g.view(v)
+                assert mine.pop("hand") == g.players[v].hand
+                mine.pop("deck_list")
+                if mine["pending"] and mine["pending"]["player"] == v:
+                    for k in private:
+                        mine["pending"].pop(k)
+                assert mine == public, v
+    assert len(seen_cards) > 20, seen_cards
+
+
 # ---------------- bots ----------------
 def test_many_bot_games_end_and_conserve_cards():
     games = 0
@@ -670,6 +741,65 @@ def test_idle_players_are_covered_then_reclaim():
         assert not room.away(0)
     finally:
         rooms_mod.TAKEOVER_SECONDS, passport.POLL_SECONDS = old, old_poll
+
+
+def poll_while(code, token, fn):
+    """Run fn() while a long-poll for token is in flight, like the page does; returns the poll's view."""
+    room = passport.rooms.get(code)
+    out = {}
+    t = threading.Thread(target=lambda: out.update(st=c.get(
+        f"/api/rooms/{code}/state", params={"token": token, "since": room.version}).json()))
+    t.start()
+    time.sleep(0.2)
+    fn()
+    t.join(10)
+    return out["st"]
+
+
+def test_leave_sticks_while_the_page_is_polling():
+    a = post("/api/rooms", {"name": "Ann"})
+    code, ta = a["code"], a["token"]
+    tb = post(f"/api/rooms/{code}/join", {"name": "Ben"})["token"]
+    post(f"/api/rooms/{code}/start", {"token": ta})
+    room = passport.rooms.get(code)
+    st = poll_while(code, tb, lambda: post(f"/api/rooms/{code}/leave", {"token": tb}))
+    assert st["seats"][1]["left"] and room.seats[1].left
+    assert room.bot_controls(1) and room.away(1)           # a bot has the seat straight away
+    c.get(f"/api/rooms/{code}/state", params={"token": tb, "since": 0})      # still polling: still gone
+    assert room.seats[1].left
+    r = c.post(f"/api/rooms/{code}/act", json={"token": tb, "intent": {"type": "end_phase"}}, headers=H)
+    assert r.status_code == 409
+    finish_with_bots(code, {0: ta})
+    post(f"/api/rooms/{code}/rematch", {"token": tb}, 409)
+    st = post(f"/api/rooms/{code}/rematch", {"token": ta})
+    assert st["seats"][1]["bot"] == "normal" and room.seat_of(tb) is None    # gone for good
+    # the last person leaving with a poll in flight: the room counts as empty and the game pauses
+    a = post("/api/rooms", {"name": "Solo", "bots": ["normal"], "start": True})
+    code, ta = a["code"], a["token"]
+    room = passport.rooms.get(code)
+    poll_while(code, ta, lambda: post(f"/api/rooms/{code}/leave", {"token": ta}))
+    assert room.empty() and not room.anyone_here()
+    # an explicit join takes the seat back (and the host role, when nobody else holds it)
+    st = post(f"/api/rooms/{code}/join", {"name": "Solo", "token": ta})["state"]
+    assert st["you"] == 0 and not st["seats"][0]["left"] and st["host"] and not room.empty()
+
+
+def test_lobby_list_with_a_bot_waiting_and_no_driver():
+    """GET api/rooms sweeps, and the sweep starts bot tasks: it must run on the event loop."""
+    room = passport.rooms.create()
+    room.add_bot("easy")
+    tok = room.add_person("Here")
+    for seed in range(50):
+        room.game = Game([s.name for s in room.seats], pick_kingdom("first", random.Random(seed)), seed=seed)
+        if room.game.waiting_on() == 0:
+            break
+    assert room.game.waiting_on() == 0 and room.task is None
+    r = c.get("/api/rooms")
+    assert r.status_code == 200
+    assert room.task is not None                    # the sweep started the bot
+    assert wait_until(lambda: room.game.waiting_on() == 1 or room.game.over)
+    room.leave(tok)                                 # off the loop: must not raise either
+    passport.rooms.rooms.pop(room.code, None)
 
 
 def test_everyone_away_pauses_the_game():

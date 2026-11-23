@@ -9,16 +9,23 @@ API (relative to the app's root; the platform serves it at /passport/):
   GET  health
   GET  api/cards                               every card and the kingdom presets
   GET  api/rooms                               open lobbies on this hotspot
-  POST api/rooms {name, bots?: [level], kingdom?}           -> {code, token, state}
-  POST api/rooms/{code}/join {name, token?}    a new seat, or your old one back -> {token, state}
-  GET  api/rooms/{code}/state?token=&since=    long-poll: returns when the version moves (or ~20 s)
+  POST api/rooms {name, bots?: [level], kingdom?, start?: bool}
+                                               -> {code, token, state}; start: true starts the
+                                               game at once (needs at least one bot)
+  POST api/rooms/{code}/join {name, token?}    a new seat, or your old one back (also after
+                                               leaving a running game) -> {token, state}
+  GET  api/rooms/{code}/state?token=&since=    long-poll: returns when the version moves (or
+                                               PASSPORT_POLL s, default 20). No or a wrong token
+                                               gets the public view (spectators: no hand, no
+                                               private decision data)
   POST api/rooms/{code}/lobby {token, op, ...} host: add_bot {level}, remove {seat},
                                                bot_level {seat, level}, kingdom {kingdom};
                                                anyone: rename {name}
   POST api/rooms/{code}/start {token}          host
-  POST api/rooms/{code}/act {token, intent}    see engine.Game.act
-  POST api/rooms/{code}/rematch {token}        anyone seated, once the game is over
-  POST api/rooms/{code}/leave {token}
+  POST api/rooms/{code}/act {token, intent}    see engine.Game.act (409 after you left)
+  POST api/rooms/{code}/rematch {token}        anyone seated who hasn't left, once it's over
+  POST api/rooms/{code}/leave {token}          lobby: frees the seat; game: a bot plays it
+                                               until you join again with your token
 POSTs need the header "X-Passport: 1" (blocks cross-site form posts).
 """
 import asyncio
@@ -93,7 +100,7 @@ def all_cards():
 
 
 @app.get("/api/rooms")
-def list_rooms():
+async def list_rooms():               # async: sweep() may start bot tasks on the event loop
     rooms.sweep()
     return {"rooms": rooms.open_lobbies()}
 
@@ -124,7 +131,7 @@ async def join_room(code: str, request: Request):
     data = await body(request)
     room = rooms.get(code)
     token = data.get("token")
-    if room.seen(token) is not None:          # your seat, back again
+    if room.rejoin(token) is not None:        # your seat, back again (also after leaving)
         return {"token": token, "state": room.view(token)}
     token = room.add_person(data.get("name"))
     return {"token": token, "state": room.view(token)}
@@ -190,7 +197,7 @@ async def act(code: str, request: Request):
 async def rematch(code: str, request: Request):
     data = await body(request)
     room = rooms.get(code)
-    room.need_seat(data.get("token"))
+    room.need_present(data.get("token"))
     if room.game is None or not room.game.over:
         raise HTTPException(409, "Finish this game first.")
     room.start()

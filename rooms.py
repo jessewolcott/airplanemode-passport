@@ -6,8 +6,10 @@ locked phone gets the same seat back. The state each person gets is drawn for th
 (engine.Game.view), so nobody sees another hand.
 
 Bots play on the server as one asyncio task per room (`Room.ensure_driver`), with a short delay
-so people can follow. A person who leaves a started game, or stops polling for TAKEOVER_SECONDS
-while the game waits on them, is played by a "normal" bot until they come back. If every
+so people can follow. A person who leaves a started game is played by a "normal" bot at once
+and stays gone until they join again with their token (the next game turns them into a bot). A
+person who sends no request for TAKEOVER_SECONDS counts as away; while away, a "normal" bot
+moves for them whenever the game waits on their seat, until their next request. If every
 person is away, the game pauses instead of playing itself out.
 """
 import asyncio
@@ -117,13 +119,28 @@ class Room:
         return i
 
     def seen(self, token):
+        """Note that this seat's person is still around. It never undoes a leave: the page's own
+        long-poll is in flight when it posts leave, and that poll must not take the seat back."""
         i = self.seat_of(token)
         if i is not None:
-            s = self.seats[i]
-            s.seen = time.monotonic()
-            if s.left:
-                s.left = False
-                self.bump()
+            self.seats[i].seen = time.monotonic()
+        return i
+
+    def rejoin(self, token):
+        """An explicit join with your token: your seat back, even after leaving a running game."""
+        i = self.seen(token)
+        if i is not None and self.seats[i].left:
+            self.seats[i].left = False
+            if self.host is None:
+                self.host = self.seats[i].token
+            self.bump()
+        return i
+
+    def need_present(self, token):
+        """A seat whose person hasn't left (moves and rematches need one)."""
+        i = self.need_seat(token)
+        if self.seats[i].left:
+            raise RoomError(409, "You left this game. Join it again to play.")
         return i
 
     def away(self, i, now=None):
@@ -230,7 +247,7 @@ class Room:
         self.ensure_driver()
 
     def act(self, token, intent):
-        i = self.need_seat(token)
+        i = self.need_present(token)
         if self.game is None:
             raise RoomError(409, "The game hasn't started.")
         try:
@@ -251,7 +268,11 @@ class Room:
         if g is None or g.over or not self.bot_controls(g.waiting_on()) or not self.anyone_here():
             return
         if self.task is None or self.task.done():
-            self.task = asyncio.get_running_loop().create_task(self._drive())
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:          # called off the event loop: the sweeper starts it soon
+                return
+            self.task = loop.create_task(self._drive())
 
     async def _drive(self):
         while True:

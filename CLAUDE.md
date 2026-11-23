@@ -43,6 +43,9 @@ Local tests: `.venv` with Python 3.10 (`fastapi==0.115.6 uvicorn==0.34.0 httpx==
   `test_hard_beats_easy_most_of_the_time` and `test_hard_holds_its_own_against_three_normals`.
 - POSTs need `X-Passport: 1`. Page: relative URLs only (a test checks).
 - Bots never run when every person in the room is away (the game pauses).
+- **Leaving sticks:** only `POST join` with the token (`Room.rejoin`) clears `left`. `seen()` (state
+  polls, acts) never does: the page's own poll is in flight when it posts leave.
+- `llm/`: checked-in notes on how it's built (kept out of the image by `.dockerignore`).
 
 ## Untested
 

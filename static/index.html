@@ -310,7 +310,7 @@ h1, h2, h3 { margin: 0; }
   </div>
   <div class="players" id="g-players"></div>
   <div class="phasebar">
-    <div class="steps" id="g-steps"><span data-p="action">Action</span><span data-p="buy">Buy</span><span data-p="cleanup">Clean up</span></div>
+    <div class="steps" id="g-steps"><span data-p="action">Action</span><span data-p="buy">Buy</span></div>
     <div class="counters"><span>Actions <b id="g-actions">0</b></span><span>Buys <b id="g-buys">0</b></span><span class="coin">Coins <b id="g-coins">0</b></span></div>
   </div>
   <div class="status" id="g-status"></div>
@@ -585,7 +585,9 @@ function openCard(id) {
   if (g && !$("#game").classList.contains("hidden")) {
     const myTurn = g.current === st.you && !g.pending && !g.over;
     const n = g.supply[id];
-    if (myTurn && n !== undefined) {
+    if (myTurn && n !== undefined && g.phase !== "buy") {
+      buy = `<span class="muted">Buy it in the buy phase: end your actions first.</span>`;
+    } else if (myTurn && n !== undefined) {
       const ok = n > 0 && g.buys > 0 && CARDS[id].cost <= g.coins;
       const why = n === 0 ? "None left." : g.buys < 1 ? "No buys left." : CARDS[id].cost > g.coins ? `You have ${g.coins} coin${g.coins === 1 ? "" : "s"}.` : "";
       buy = `<button class="btn primary" data-buy="${id}" ${ok ? "" : "disabled"}>Buy for ${CARDS[id].cost}</button>${why ? `<span class="muted">${why}</span>` : ""}`;
@@ -663,9 +665,9 @@ function openHelp() {
     <li><b>Buy.</b> Play your money (green), then buy one card from the market. It goes on your discard pile.</li>
     <li><b>Clean up.</b> Everything you played or held is discarded, and you draw 5 new cards. When your deck runs out, your discard pile is shuffled into a new deck, so the cards you bought start showing up.</li>
     <li><b>Points.</b> Postcards (1), Passport Stamps (3) and Visas (6) score, but do nothing in your hand. Buy money and actions early, points late.</li>
-    <li><b>The end.</b> When the Visas run out, or any three market piles are empty, the trip ends after that turn. Most VP wins; a tie goes to whoever took fewer turns.</li>
+    <li><b>The end.</b> When the Visas run out, or any three market piles are empty (the Jet Lag pile counts too), the trip ends after that turn. Most VP wins; a tie goes to whoever took fewer turns.</li>
   </ol>
-  <p><b>Attacks</b> (red) hit everyone else: discard cards, catch <i>Jet Lag</i> (−1 VP) or lose money. <b>Travel Insurance</b> (teal) in your hand blocks them. <b>Trashing</b> removes weak cards from your deck for good, which makes your good cards come up more often.</p>
+  <p><b>Attacks</b> (red) hit everyone else: discard cards, catch <i>Jet Lag</i> (−1 VP) or lose money. Jet Lag is a market pile that costs 0, so a card that gains "a card costing up to N" may take one (rarely a good idea). <b>Travel Insurance</b> (teal) in your hand blocks them. <b>Trashing</b> removes weak cards from your deck for good, which makes your good cards come up more often.</p>
   <p class="muted">Tip: tap any card in the market to read it. Tap a card in your hand to read it, tap again to play it.</p></div>
   <div class="row"><button class="btn primary" data-close>Got it</button></div>`);
 }
