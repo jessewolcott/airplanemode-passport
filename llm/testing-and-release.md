@@ -24,7 +24,7 @@ through the API with normal-bot choices.
 | Ending | `test_game_ends_on_visas_and_three_piles`, `test_ties_go_to_fewer_turns_then_share`, `test_round_limit_ends_stalled_games` |
 | Hidden info | `test_views_hide_other_hands`, `test_log_and_public_view_never_leak_hidden_cards` (every step of 40 games, bots plus random moves: each seat's view minus its own hand and decision equals the public view, and every log line names only cards that became public that step or are in play; Hitchhike's kept card and a shown Travel Insurance are the allowed reveals), plus checks inside the attack, Delayed Flight and Window Seat tests |
 | Bots | `test_many_bot_games_end_and_conserve_cards` (300 games: every set x 2-4 players x 25 seeds), `test_random_players_never_break_the_engine` (60 fuzz games), `test_every_bot_answers_every_decision_legally` (spies on `random_answer`: no fallback allowed), `test_hard_beats_easy_most_of_the_time` (>= 75 % per set), `test_hard_holds_its_own_against_three_normals` (>= 33 % of 60, fair share 25 %) |
-| API | `test_page_and_health` (relative URLs, no `http(s)://`, icon type, 31 cards), `test_posts_need_the_header`, `test_lobby_join_bots_and_start`, `test_solo_game_vs_bots_long_poll` (poll waits ~1 s when nothing moves, returns at once when behind), `test_leaving_hands_the_seat_to_a_bot_and_coming_back_reclaims_it`, `test_leave_sticks_while_the_page_is_polling` (holds a poll open in a thread, like the page), `test_lobby_list_with_a_bot_waiting_and_no_driver`, `test_idle_players_are_covered_then_reclaim` (patches `TAKEOVER_SECONDS`/`POLL_SECONDS`), `test_everyone_away_pauses_the_game`, `test_unknown_rooms_and_room_cap`, `test_lobby_leave_and_forget` |
+| API | `test_page_and_health` (relative URLs, no `http(s)://`, icon type, 31 cards), `test_page_has_airplanemode_home_on_every_screen`, `test_posts_need_the_header`, `test_lobby_join_bots_and_start`, `test_solo_game_vs_bots_long_poll` (poll waits ~1 s when nothing moves, returns at once when behind), `test_leaving_hands_the_seat_to_a_bot_and_coming_back_reclaims_it`, `test_leave_sticks_while_the_page_is_polling` (holds a poll open in a thread, like the page), `test_lobby_list_with_a_bot_waiting_and_no_driver`, `test_idle_players_are_covered_then_reclaim` (patches `TAKEOVER_SECONDS`/`POLL_SECONDS`), `test_everyone_away_pauses_the_game`, `test_unknown_rooms_and_room_cap`, `test_lobby_leave_and_forget` |
 
 Not covered: the page's JavaScript (no browser tests), concurrent requests (the test client
 is mostly used sequentially; only the leave test holds a poll open in a thread), real phones.
@@ -64,7 +64,7 @@ tag).
    `docs/screenshots/` if the UI changed.
 2. **Ask Jesse**, then push `vX.Y.Z`. CI publishes `ghcr.io/jessewolcott/airplanemode-passport:X.Y.Z`.
 3. In `../airplanemode`: bump the pinned tag in `compose.yaml` (never `latest`) and the
-   status notes. Released so far: 0.1.0.
+   status notes. Released so far: 0.1.0, 0.1.1 (leaving sticks, lobby list 500 fixed), 0.1.2 (home button).
 
 ## Untested (as of 0.1.0)
 

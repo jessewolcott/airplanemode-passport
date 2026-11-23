@@ -4,14 +4,14 @@ Everything here is in memory, in one process. Shape shared with Gate Change (dec
 
 ## Objects
 
-- **`Seat`** (`rooms.py:57-65`): `name`, `token` (`None` for bots), `level` (bot level, or
+- **`Seat`** (`rooms.py:59-67`): `name`, `token` (`None` for bots), `level` (bot level, or
   `None` for a person), `seen` (monotonic time of the person's last request), `left`.
   `human` = has a token.
-- **`Room`** (`rooms.py:68-302`): `code`, `seats` (list, index = player index in the game),
+- **`Room`** (`rooms.py:70-323`): `code`, `seats` (list, index = player index in the game),
   `host` (the host's token), `kingdom` (preset id or `"random"`, default `"first"`), `game`,
   `games_played`, `bots` (`{seat index: Bot}`, built lazily), `version`, `_changed`
   (`asyncio.Event`), `touched`, `task` (the bot driver).
-- **`Rooms`** (`rooms.py:305-347`): `rooms` dict by code; `create`, `get`, `open_lobbies`,
+- **`Rooms`** (`rooms.py:326-368`): `rooms` dict by code; `create`, `get`, `open_lobbies`,
   `sweep`.
 - **`RoomError(status, message)`**: `app.py` turns it into `{"error": message}` with that
   status.
@@ -29,9 +29,9 @@ Everything here is in memory, in one process. Shape shared with Gate Change (dec
 
 ## Versions and long-polling
 
-- `bump()` (`rooms.py:83-87`): `version += 1`, `touched = now`, swap in a fresh
+- `bump()` (`rooms.py:85-89`): `version += 1`, `touched = now`, swap in a fresh
   `asyncio.Event` and set the old one, which wakes every waiter at once.
-- `wait(since, timeout)` (`rooms.py:89-96`): returns at once if `version != since`, else waits
+- `wait(since, timeout)` (`rooms.py:91-98`): returns at once if `version != since`, else waits
   on the current event up to `timeout` (`PASSPORT_POLL`, 20 s).
 - Every state change bumps: seat changes, lobby ops, start, each move (person or bot), a
   person coming back. `version` starts at 1, so `since=0` always returns immediately.
@@ -49,7 +49,7 @@ Everything here is in memory, in one process. Shape shared with Gate Change (dec
 | `rename(i, name)` | any seated person | any time | |
 | `start(seed=None)` | host (`/start`) or anyone seated (`/rematch`, only after game over) | no game running, 2-4 seats | see below |
 
-`start()` (`rooms.py:215-230`): people who had left (`left=True`) become bots for good
+`start()` (`rooms.py:232-247`): people who had left (`left=True`) become bots for good
 (`token=None, level="normal"`); a 32-bit seed is drawn; the kingdom comes from
 `pick_kingdom(self.kingdom, Random(seed))`; `bots` is reset; `games_played += 1`; bump;
 `ensure_driver()`.
@@ -60,7 +60,7 @@ which drops the finished game and returns the room to the lobby.
 
 ## Leaving and the host
 
-`leave(token)` (`rooms.py:199-209`): in the lobby the seat is deleted; once a game exists the
+`leave(token)` (`rooms.py:216-226`): in the lobby the seat is deleted; once a game exists the
 seat is only marked `left`. If the host leaves, the host role passes to the first remaining
 person who hasn't left (or `None`). The `/leave` endpoint then deletes the room if nobody
 is left and there's no game.
@@ -85,7 +85,7 @@ always a normal bot. An idle (not left) person is no longer away after any reque
 their token, and the driver stops playing for them at its next check. A person who left
 must `join` again with their token.
 
-## The bot driver (`ensure_driver` / `_drive`, `rooms.py:249-281`)
+## The bot driver (`ensure_driver` / `_drive`, `rooms.py:266-302`)
 
 - `ensure_driver()` starts `_drive()` as an asyncio task when: there's a running game, the
   seat it waits on (`game.waiting_on()`: pending decision owner, else current player) is
@@ -104,7 +104,7 @@ must `join` again with their token.
 
 - `Rooms.create()` sweeps first; at 200 rooms it evicts the least recently touched one only
   if it was untouched for 10+ minutes, else `503 "Too many games on this hotspot right now."`
-- `sweep()` (`rooms.py:338-347`) deletes a room when `now - touched > FORGET_AFTER` (2 h) or
+- `sweep()` (`rooms.py:359-368`) deletes a room when `now - touched > FORGET_AFTER` (2 h) or
   when it's `empty()` (no person who hasn't left) and untouched for 60 s, cancelling its
   task. For running games it calls `ensure_driver()`.
 - `touched` moves only on `bump()`, so a lobby nobody changes is forgotten after 2 h even
@@ -112,7 +112,7 @@ must `join` again with their token.
 - `open_lobbies()`: rooms with no game, at least one person, fewer than 4 seats; newest
   first; at most 20; each `{code, host (name), players, kingdom}`.
 
-## What a person gets (`Room.view`, `rooms.py:284-302`)
+## What a person gets (`Room.view`, `rooms.py:305-323`)
 
 ```
 {code, version, state: "lobby"|"playing"|"over", game_no, you (seat index or null),

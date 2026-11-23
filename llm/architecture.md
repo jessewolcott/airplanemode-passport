@@ -29,13 +29,13 @@ There is no dependency on any other AirplaneMode app or on the platform admin se
 
 ## Request flow: a solo game
 
-1. `GET /passport/` -> `index()` (`app.py:210`) serves `static/index.html` with
+1. `GET /passport/` -> `index()` (`app.py:217`) serves `static/index.html` with
    `Cache-Control: no-cache`.
 2. `boot()` loads `api/cards` (all 31 cards + presets). If `localStorage["passport.room"]`
    holds `{code, token}` it asks `state?since=0`; if the server still knows the seat it goes
    straight back to the table, else it clears the saved room and shows home.
 3. "Play vs bots" -> `POST api/rooms {name, bots: [level x n], kingdom, start: true}`.
-   `create_room` (`app.py:101`) makes the room, seats the person (host), sets the kingdom,
+   `create_room` (`app.py:108`) makes the room, seats the person (host), sets the kingdom,
    adds bots, starts the game, and returns `{code, token, state}`.
 4. `Room.start` builds a `Game`, bumps the version and calls `ensure_driver`, which starts
    an asyncio task that plays bot seats with a 0.7-1.2 s delay per move.
@@ -47,7 +47,7 @@ There is no dependency on any other AirplaneMode app or on the platform admin se
 ## How it plugs into the platform
 
 - Platform `compose.yaml` service `passport`: image
-  `ghcr.io/jessewolcott/airplanemode-passport:0.1.0` (pinned), `mem_limit
+  `ghcr.io/jessewolcott/airplanemode-passport:0.1.2` (pinned), `mem_limit
   ${PASSPORT_MEM:-64m}`, `restart: unless-stopped`. No env, no volume.
 - `hardware/nanopi-r6s.env`: `PASSPORT_MEM=64m`; `hardware/glinet.env`: `PASSPORT_MEM=48m`
   (decision 0016: 48 MB on GL.iNet for the in-memory apps).
@@ -66,10 +66,10 @@ There is no dependency on any other AirplaneMode app or on the platform admin se
 
 | Var | Default | Read at | Meaning |
 |---|---|---|---|
-| `PASSPORT_BOT_DELAY` | `0.7-1.2` | `rooms.py:34-43` (`bot_delay`, read on every call) | Seconds before each bot move, `"min-max"` or one number; unparsable -> 1.0. Tests use `0` |
-| `PASSPORT_TAKEOVER` | `60` | `rooms.py:30` (import time) | Seconds without a request from a person before they count as away |
-| `PASSPORT_ROOM_TTL` | `7200` | `rooms.py:29` (import time) | Seconds since the last version bump before a room is forgotten |
-| `PASSPORT_POLL` | `20` | `app.py:40` (import time) | How long a state request waits for a change. Tests use `1` |
+| `PASSPORT_BOT_DELAY` | `0.7-1.2` | `rooms.py:36-45` (`bot_delay`, read on every call) | Seconds before each bot move, `"min-max"` or one number; unparsable -> 1.0. Tests use `0` |
+| `PASSPORT_TAKEOVER` | `60` | `rooms.py:32` (import time) | Seconds without a request from a person before they count as away |
+| `PASSPORT_ROOM_TTL` | `7200` | `rooms.py:31` (import time) | Seconds since the last version bump before a room is forgotten |
+| `PASSPORT_POLL` | `20` | `app.py:47` (import time) | How long a state request waits for a change. Tests use `1` |
 
 `app.yaml`'s `env:` block and the README settings table document all four.
 
@@ -80,11 +80,11 @@ There is no dependency on any other AirplaneMode app or on the platform admin se
 | `HAND_SIZE` | `engine.py:34` | 5 | Cards drawn at clean-up |
 | `ROUND_LIMIT` | `engine.py:35` | 60 | Safety net: game ends once every player has had 60 turns |
 | `LOG_KEEP` | `engine.py:36` | 200 | Log entries kept (views send the last 80) |
-| `CODE_ALPHABET` | `rooms.py:26` | A-Z minus I, L, O | Room codes, 4 letters |
-| `MAX_ROOMS` | `rooms.py:27` | 200 | Rooms in memory |
-| `MAX_SEATS` | `rooms.py:28` | 4 | Seats per room |
-| `BOT_NAMES` | `rooms.py:31` | Ada ... Juno (10) | First unused name for a new bot |
-| `SWEEP_SECONDS` | `app.py:41` | 5 | Sweeper interval |
+| `CODE_ALPHABET` | `rooms.py:28` | A-Z minus I, L, O | Room codes, 4 letters |
+| `MAX_ROOMS` | `rooms.py:29` | 200 | Rooms in memory |
+| `MAX_SEATS` | `rooms.py:30` | 4 | Seats per room |
+| `BOT_NAMES` | `rooms.py:33` | Ada ... Juno (10) | First unused name for a new bot |
+| `SWEEP_SECONDS` | `app.py:48` | 5 | Sweeper interval |
 
 ## Process model
 
@@ -98,8 +98,8 @@ because it calls `rooms.sweep()`, which can start bot tasks (it used to be a pla
 could 500; see [gotchas-and-extending.md](gotchas-and-extending.md)). `ensure_driver()` also
 returns quietly when called off the event loop, leaving the start to the sweeper.
 
-The lifespan (`app.py:46-57`) starts a sweeper task: every 5 s `rooms.sweep()` forgets idle
+The lifespan (`app.py:53-64`) starts a sweeper task: every 5 s `rooms.sweep()` forgets idle
 rooms and calls `ensure_driver()` on running games (that is how takeover of an idle person
-starts without anyone polling). FastAPI's docs/OpenAPI endpoints are off (`app.py:60`).
+starts without anyone polling). FastAPI's docs/OpenAPI endpoints are off (`app.py:67`).
 
 The container runs as an unprivileged `passport` user (uid 10001) and writes nothing to disk.

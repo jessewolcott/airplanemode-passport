@@ -5,11 +5,11 @@ All paths are relative to the app root; on the box Caddy serves them under `/pas
 
 ## Conventions
 
-- **POSTs** go through `body()` (`app.py:73-82`): header `X-Passport: 1` or
+- **POSTs** go through `body()` (`app.py:80-89`): header `X-Passport: 1` or
   `403 "Missing X-Passport header."` (blocks cross-site form posts); JSON body or
   `400 "Send JSON."`; must be an object or `400 "Send a JSON object."`
 - **Errors** are always `{"error": "Human sentence."}` with a status: `RoomError` and
-  `HTTPException` both go through handlers (`app.py:63-70`). `IllegalMove` from the engine
+  `HTTPException` both go through handlers (`app.py:70-77`). `IllegalMove` from the engine
   becomes `RoomError(400, message)` in `Room.act`. The page shows `error` in a toast.
 - **GETs** need no header. There's no auth beyond the seat token, and no rate limiting.
 - Responses that carry a room are `Room.view(token)`: see
@@ -33,21 +33,21 @@ All paths are relative to the app root; on the box Caddy serves them under `/pas
 | `POST /api/rooms/{code}/rematch` | `{token}` | the view | 403 not seated; 409 "Finish this game first." |
 | `POST /api/rooms/{code}/leave` | `{token}` | `{"ok": true}` | 403 not seated |
 
-### `POST /api/rooms` (`app.py:101-119`)
+### `POST /api/rooms` (`app.py:108-126`)
 
 Validates `bots` is a list of at most 3, creates the room, seats the caller (host), then
 applies `kingdom` (if truthy), adds each bot, and starts if `start` is truthy. If any of
 those raises a `RoomError`, the half-made room is removed before re-raising. The `start`
 flag (documented in the docstring's API list) is what the page's "Play vs bots" uses.
 
-### `POST /api/rooms/{code}/join` (`app.py:122-130`)
+### `POST /api/rooms/{code}/join` (`app.py:129-137`)
 
 If `token` matches a seat in the room, the caller gets that seat back via `Room.rejoin`
 (works mid-game; it is the only thing that clears `left`, and it makes the person host if the
 room has none). Otherwise a new seat is added (lobby only). The name in the body is ignored
 on rejoin.
 
-### `GET /api/rooms/{code}/state` (`app.py:133-140`)
+### `GET /api/rooms/{code}/state` (`app.py:140-147`)
 
 `seen(token)` -> `ensure_driver()` -> `await room.wait(since, POLL_SECONDS)` -> `seen(token)`
 again -> view. `seen` only refreshes the seat's last-request time; it never undoes a leave
@@ -55,7 +55,7 @@ again -> view. `seen` only refreshes the seat's last-request time; it never undo
 fine: you get the public view with `you: null` (the page treats that as "you're no longer
 in that room").
 
-### `POST /api/rooms/{code}/lobby` (`app.py:143-162`)
+### `POST /api/rooms/{code}/lobby` (`app.py:150-169`)
 
 | `op` | Who | Fields |
 |---|---|---|
@@ -65,20 +65,20 @@ in that room").
 | `bot_level` | host | `seat`, `level` |
 | `kingdom` | host | `kingdom` (`first`, `business`, `backpacker`, `random`) |
 
-### `POST /api/rooms/{code}/act` (`app.py:180-186`)
+### `POST /api/rooms/{code}/act` (`app.py:187-193`)
 
 `intent` is passed to `Game.act` unchanged; see the intents table in
 [engine-and-cards.md](engine-and-cards.md). Answer intents must carry the decision's `id`
 from `game.pending.id`.
 
-### `POST /api/rooms/{code}/rematch` (`app.py:189-197`)
+### `POST /api/rooms/{code}/rematch` (`app.py:196-204`)
 
 Any seated person who hasn't left (not just the host; 409 after leaving), only when the
 current game is over. Same seats,
 `game_no + 1`, new seed and (for `random`) a new kingdom. People who had left become normal
 bots.
 
-### `POST /api/rooms/{code}/leave` (`app.py:200-207`)
+### `POST /api/rooms/{code}/leave` (`app.py:207-214`)
 
 `Room.leave`, then deletes the room if nobody is left and no game exists. Mid-game the seat
 is marked `left` and a bot plays it at once; `act` and `rematch` with that token get 409

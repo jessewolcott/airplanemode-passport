@@ -1,6 +1,6 @@
 # Passport: how it's built (LLM / engineer reference)
 
-Checked-in notes, written from the code (release 0.1.0 plus the fixes after it, 2026-11-22).
+Checked-in notes, written from the code (release 0.1.2, 2026-11-22).
 They're kept out of the image by `.dockerignore` (it drops both `llm` and `*.md`). If the code
 and these notes disagree, the code wins; fix the notes.
 
@@ -20,7 +20,7 @@ token kept in the browser, and long-polling (`state?since=<version>`, about 20 s
 WebSockets, so it works through Caddy with no config. A person who leaves is played by a
 "normal" bot until they join again with their token; one who goes quiet for a minute counts as
 away, and a normal bot moves for them whenever the game waits on their seat; if every person is away the game
-pauses. The whole UI is one file, `static/index.html` (~800 lines of HTML/CSS/vanilla JS).
+pauses. The whole UI is one file, `static/index.html` (~840 lines of HTML/CSS/vanilla JS).
 
 Nothing has been tested on real phones or the real box yet. The page was played in a
 phone-sized desktop Chrome window; several people at once is covered only by the API tests.
