@@ -8,7 +8,7 @@ import time
 from collections import Counter
 from pathlib import Path
 
-os.environ.update(PASSPORT_BOT_DELAY="0", PASSPORT_POLL="1")
+os.environ.update(PASSPORT_BOT_DELAY="0", PASSPORT_POLL="1", ADMIN_URL="")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fastapi.testclient import TestClient  # noqa: E402
@@ -723,7 +723,26 @@ def test_leaving_hands_the_seat_to_a_bot_and_coming_back_reclaims_it():
     assert st["state"]["you"] == 1 and not st["state"]["seats"][1]["away"]
     # the host leaving passes the host role on
     post(f"/api/rooms/{code}/leave", {"token": ta})
-    assert room.host == tb
+    assert room.host.token == tb
+
+
+def test_whos_who_names_seats_and_finds_your_seat():
+    people = {"phone": {"id": "p1", "name": "Sam", "avatar": "🦊"}}
+
+    async def fake_whois(request):
+        return people.get(request.headers.get("x-test-device"))
+    old, passport.whois = passport.whois, fake_whois
+    try:
+        sam = {**H, "X-Test-Device": "phone"}
+        r = c.post("/api/rooms", json={"name": ""}, headers=sam).json()
+        code, t = r["code"], r["token"]
+        assert (r["state"]["seats"][0]["name"], r["state"]["seats"][0]["avatar"]) == ("Sam", "🦊")
+        again = c.post(f"/api/rooms/{code}/join", json={}, headers=sam).json()   # another browser
+        assert again["token"] == t and len(again["state"]["seats"]) == 1
+        kim = post(f"/api/rooms/{code}/join", {"name": "Kim"})
+        assert [(s["name"], s["avatar"]) for s in kim["state"]["seats"]] == [("Sam", "🦊"), ("Kim", None)]
+    finally:
+        passport.whois = old
 
 
 def test_idle_players_are_covered_then_reclaim():
@@ -732,8 +751,8 @@ def test_idle_players_are_covered_then_reclaim():
     tb = post(f"/api/rooms/{code}/join", {"name": "Watcher"})["token"]
     post(f"/api/rooms/{code}/start", {"token": ta})
     room = passport.rooms.get(code)
-    old, old_poll = rooms_mod.TAKEOVER_SECONDS, passport.POLL_SECONDS
-    rooms_mod.TAKEOVER_SECONDS, passport.POLL_SECONDS = 0.3, 0.1
+    old, old_poll = rooms_mod.PassRoom.away_after, passport.POLL_SECONDS
+    rooms_mod.PassRoom.away_after, passport.POLL_SECONDS = 0.3, 0.1
     try:
         time.sleep(0.4)
         # seats: Idle, a bot, Watcher. Watcher keeps polling; Idle doesn't, so a bot covers Idle.
@@ -750,7 +769,7 @@ def test_idle_players_are_covered_then_reclaim():
         c.get(f"/api/rooms/{code}/state", params={"token": ta, "since": 0})
         assert not room.away(0)
     finally:
-        rooms_mod.TAKEOVER_SECONDS, passport.POLL_SECONDS = old, old_poll
+        rooms_mod.PassRoom.away_after, passport.POLL_SECONDS = old, old_poll
 
 
 def poll_while(code, token, fn):
@@ -826,12 +845,18 @@ def test_everyone_away_pauses_the_game():
 def test_unknown_rooms_and_room_cap():
     assert c.get("/api/rooms/ZZZZ/state").status_code == 404
     post("/api/rooms/ZZZZ/join", {"name": "x"}, 404)
-    old = rooms_mod.MAX_ROOMS
-    rooms_mod.MAX_ROOMS = len(passport.rooms.rooms)
+    for room in list(passport.rooms.rooms.values()):
+        passport.rooms.discard(room)
+    old = passport.rooms.max_rooms
+    passport.rooms.max_rooms = 2
     try:
-        post("/api/rooms", {"name": "x"}, 503)
+        lobby = post("/api/rooms", {"name": "x"})["code"]
+        live = post("/api/rooms", {"name": "x", "bots": ["easy"], "start": True})["code"]
+        live2 = post("/api/rooms", {"name": "x", "bots": ["easy"], "start": True})["code"]   # the lobby goes
+        assert lobby not in passport.rooms.rooms and {live, live2} == set(passport.rooms.rooms)
+        post("/api/rooms", {"name": "x"}, 503)                  # never a game in progress
     finally:
-        rooms_mod.MAX_ROOMS = old
+        passport.rooms.max_rooms = old
 
 
 def test_lobby_leave_and_forget():
@@ -840,7 +865,7 @@ def test_lobby_leave_and_forget():
     post(f"/api/rooms/{code}/leave", {"token": a["token"]})
     assert code not in passport.rooms.rooms
     a = post("/api/rooms", {"name": "Old"})
-    passport.rooms.get(a["code"]).touched -= rooms_mod.FORGET_AFTER + 1
+    passport.rooms.get(a["code"]).touched -= passport.rooms.idle + 1
     passport.rooms.sweep()
     assert a["code"] not in passport.rooms.rooms
 

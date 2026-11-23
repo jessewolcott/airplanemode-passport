@@ -37,8 +37,10 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
+from amrooms import RoomError, whois
+
 import cards
-from rooms import RoomError, Rooms
+from rooms import make_rooms
 
 log = logging.getLogger("passport")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -47,19 +49,12 @@ HERE = Path(__file__).parent
 POLL_SECONDS = float(os.getenv("PASSPORT_POLL", 20))
 SWEEP_SECONDS = 5
 
-rooms = Rooms()
+rooms = make_rooms()
 
 
 @contextlib.asynccontextmanager
 async def lifespan(_app):
-    async def sweeper():
-        while True:
-            await asyncio.sleep(SWEEP_SECONDS)
-            try:
-                rooms.sweep()
-            except Exception:
-                log.exception("sweep failed")
-    task = asyncio.create_task(sweeper())
+    task = asyncio.create_task(rooms.sweep_forever(SWEEP_SECONDS))
     yield
     task.cancel()
 
@@ -101,8 +96,7 @@ def all_cards():
 
 @app.get("/api/rooms")
 async def list_rooms():               # async: sweep() may start bot tasks on the event loop
-    rooms.sweep()
-    return {"rooms": rooms.open_lobbies()}
+    return {"rooms": [r.lobby_summary() for r in rooms.open_lobbies(20)]}   # (sweeps first)
 
 
 @app.post("/api/rooms")
@@ -111,8 +105,9 @@ async def create_room(request: Request):
     bots = data.get("bots") or []
     if not isinstance(bots, list) or len(bots) > 3:
         raise HTTPException(400, "Up to 3 bots.")
+    who = await whois(request)
     room = rooms.create()
-    token = room.add_person(data.get("name"))
+    token = room.add_person(data.get("name"), who=who)
     try:
         if data.get("kingdom"):
             room.set_kingdom(data["kingdom"])
@@ -121,7 +116,7 @@ async def create_room(request: Request):
         if data.get("start"):
             room.start()
     except RoomError:
-        rooms.rooms.pop(room.code, None)
+        rooms.discard(room)
         raise
     return {"code": room.code, "token": token, "state": room.view(token)}
 
@@ -129,11 +124,10 @@ async def create_room(request: Request):
 @app.post("/api/rooms/{code}/join")
 async def join_room(code: str, request: Request):
     data = await body(request)
+    who = await whois(request)
     room = rooms.get(code)
-    token = data.get("token")
-    if room.rejoin(token) is not None:        # your seat, back again (also after leaving)
-        return {"token": token, "state": room.view(token)}
-    token = room.add_person(data.get("name"))
+    # your seat back (also after leaving) if the token or who's who says it's you; else a new one
+    token = room.join(data.get("name"), data.get("token"), who=who)
     return {"token": token, "state": room.view(token)}
 
 
@@ -209,8 +203,7 @@ async def leave(code: str, request: Request):
     data = await body(request)
     room = rooms.get(code)
     room.leave(data.get("token"))
-    if room.empty() and room.game is None:
-        rooms.rooms.pop(room.code, None)
+    rooms.sweep()                         # an empty lobby goes at once
     return {"ok": True}
 
 

@@ -13,3 +13,4 @@ env:
   PASSPORT_TAKEOVER: Seconds without hearing from a player before a bot covers their seat (default 60).
   PASSPORT_ROOM_TTL: Seconds before an idle room is forgotten (default 7200).
   PASSPORT_POLL: Seconds a state request (long-poll) waits for a change before it returns (default 20).
+  ADMIN_URL: The admin service, for who's who names on seats (default http://admin:8000; empty turns it off).

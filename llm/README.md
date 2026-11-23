@@ -1,6 +1,7 @@
 # Passport: how it's built (LLM / engineer reference)
 
-Checked-in notes, written from the code (release 0.1.2, 2026-11-22).
+Checked-in notes, written from the code (release 0.1.2, 2026-11-22; updated 2026-11-23 for
+`rooms.py` moving onto the platform's Rooms SDK, `amrooms`, not yet released).
 They're kept out of the image by `.dockerignore` (it drops both `llm` and `*.md`). If the code
 and these notes disagree, the code wins; fix the notes.
 
@@ -15,12 +16,15 @@ Everyone starts with 7 Coins + 3 Postcards, holds 5 cards a turn, plays actions,
 market of 10 kingdom cards (one of three presets or 10 random of 24) plus money and victory
 piles, and the game ends when the Visas or any three piles run out. The server enforces every
 rule (`engine.py`, pure and seeded) and sends each player only their own hand. Multiplayer is
-one shape shared with Gate Change (decision 0016): a room with a 4-letter code, a secret seat
+one shape shared with Gate Change (decision 0016), now one package, the platform's `amrooms`
+(decision 0022): a room with a 4-letter code, a secret seat
 token kept in the browser, and long-polling (`state?since=<version>`, about 20 s) instead of
 WebSockets, so it works through Caddy with no config. A person who leaves is played by a
 "normal" bot until they join again with their token; one who goes quiet for a minute counts as
 away, and a normal bot moves for them whenever the game waits on their seat; if every person is away the game
-pauses. The whole UI is one file, `static/index.html` (~840 lines of HTML/CSS/vanilla JS).
+pauses. A name picked on the AirplaneMode menu (who's who, decision 0021) names your seat,
+shows your emoji, and lets your other browsers on the same phone find the same seat. The
+whole UI is one file, `static/index.html` (~840 lines of HTML/CSS/vanilla JS).
 
 Nothing has been tested on real phones or the real box yet. The page was played in a
 phone-sized desktop Chrome window; several people at once is covered only by the API tests.
@@ -31,7 +35,7 @@ phone-sized desktop Chrome window; several people at once is covered only by the
 |---|---|
 | [architecture.md](architecture.md) | The pieces, request flow, platform wiring, config, process model |
 | [engine-and-cards.md](engine-and-cards.md) | `cards.py` data and `engine.py` rules: turn flow, decisions, every card effect, ending, views |
-| [rooms-and-long-poll.md](rooms-and-long-poll.md) | `rooms.py`: rooms, seats, tokens, versions, the bot driver, takeover, sweeping |
+| [rooms-and-long-poll.md](rooms-and-long-poll.md) | `rooms.py` on `amrooms`: seats, tokens, versions, the bot driver, takeover, sweeping |
 | [bots.md](bots.md) | `bots.py`: levels, plans, buying, answering, the tuning tables |
 | [api.md](api.md) | `app.py`: every endpoint, request/response shapes, errors |
 | [frontend-page.md](frontend-page.md) | `static/index.html`: screens, polling, rendering, sheets, local storage |
@@ -45,12 +49,13 @@ phone-sized desktop Chrome window; several people at once is covered only by the
 | `cards.py` | 139 | Card data (7 base + 24 kingdom), presets, pile sizes, `describe()` for the page |
 | `engine.py` | 665 | The rules: `Game`, `Decision`, card effects (`EFFECTS`) |
 | `bots.py` | 379 | `Bot` (easy/normal/hard), `random_answer`, `play_bot_game` |
-| `rooms.py` | 347 | `Room`, `Rooms`, `Seat`, `RoomError`, the per-room bot task |
-| `app.py` | 217 | FastAPI app, the HTTP API (listed in its docstring), the sweeper task |
-| `static/index.html` | 803 | The whole frontend |
+| `rooms.py` | 174 | `PassRoom(amrooms.Room)`: card set, start, moves, view, the driver's `plan()`; `make_rooms()` |
+| `../airplanemode/sdk/rooms/` | | `amrooms` (platform Rooms SDK): `Room`, `Rooms`, `Seat`, `RoomError`, the driver loop, `whois` |
+| `app.py` | 217 | FastAPI app, the HTTP API (listed in its docstring), `whois` calls, the sweeper task |
+| `static/index.html` | 840 | The whole frontend |
 | `static/icon.svg`, `docs/icon.svg` | | App icon (same file twice) |
-| `tests/test_passport.py` | 723 | Rules, bots, rooms and API tests (plain script, no pytest) |
-| `Dockerfile`, `requirements.txt`, `.dockerignore` | | Image (python:3.12-slim, fastapi + uvicorn only) |
+| `tests/test_passport.py` | 888 | Rules, bots, rooms and API tests (plain script, no pytest) |
+| `Dockerfile`, `requirements.txt`, `.dockerignore` | | Image (python:3.12-slim, fastapi, uvicorn, `amrooms` from a tag tarball, which brings httpx) |
 | `compose.yaml` | | Standalone dev on http://localhost:8772 |
 | `app.yaml` | | AirplaneMode app manifest |
 | `.github/workflows/image.yml` | | CI: tests, then multi-arch image to GHCR |

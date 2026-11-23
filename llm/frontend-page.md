@@ -1,23 +1,24 @@
 # The page (`static/index.html`)
 
-One file: CSS (`:10-225`), an inline SVG sprite of glyphs (`:229-239`), three screens
+One file: CSS (`:10-226`), an inline SVG sprite of glyphs (`:230-240`), three screens
 (`#home`, `#lobby`, `#game`), one bottom-sheet container and a toast, and one `<script>`
-(`:365-835`) of vanilla JS. No build step, no external resources (a test forbids `http(s)://`
+(`:366-838`) of vanilla JS. No build step, no external resources (a test forbids `http(s)://`
 anywhere in the HTML and absolute `src`/`href`).
 
 ## State
 
 - `CARDS`, `PRESETS`: from `api/cards` at boot.
-- `S` (`:377`): `code`, `token`, `st` (last rendered state), `version`, `pollId` (poll loop
+- `S` (`:378`): `code`, `token`, `st` (last rendered state), `version`, `pollId` (poll loop
   generation), `sel` (selected hand card), `soloSet`, `picked` (decision picks), `sheet`
   (which sheet is open: `"help"`, `"card"`, `"log"`, `"menu"`, `"over"`, `"dec:<id>"`),
   `overShown`.
 - `localStorage` via `store` (prefix `passport.`, every access in try/catch):
   `passport.room` = `{code, token}` (your seat), `passport.name` = your name.
 
-## Boot (`:813-830`)
+## Boot (`:814-833`)
 
-Fill the name field; load `api/cards` (on failure: toast "Can't reach Passport. Retrying…"
+Fill the name field (stored name, then the who's who name from `fetch("../api/me")` when
+the person picked one on the AirplaneMode menu; errors ignored); load `api/cards` (on failure: toast "Can't reach Passport. Retrying…"
 and retry in 3 s); a URL hash `#ABCD` pre-fills the join code; if a room is saved, ask
 `state?since=0` and enter it if `you` is set; forget it only on `you: null` or a 404 (any
 other error keeps it, and home shows "Back to your game"); otherwise show home.
@@ -26,7 +27,7 @@ so does `pageshow` from the back/forward cache.
 
 Coming back from the AirplaneMode menu is a page load, so boot re-enters the saved room: a
 state request with the token marks the person present again and the bots stop covering
-their seat (they only did after `TAKEOVER_SECONDS`). Going home isn't Leave (`left` stays
+their seat (they only did after `PassRoom.away_after`, 60 s). Going home isn't Leave (`left` stays
 false), so no confirm.
 
 ## AirplaneMode home button
@@ -51,7 +52,7 @@ and results sheets; sheets are capped at `100dvh - 64px` so they start below it.
 - `join()` reuses the saved token if the code matches the saved room, so rejoining by code
   gets your old seat back.
 
-## Polling (`:455-470`)
+## Polling (`:456-471`)
 
 `startPolling()` bumps `S.pollId` and loops while it's still current:
 `GET api/rooms/{code}/state?token=...&since=S.version`. A response with `you == null` ->
@@ -61,14 +62,14 @@ in-flight request isn't aborted, its result is dropped.
 
 `render(st)` ignores states older than `S.version`, then draws the lobby or the game.
 
-## Lobby (`renderLobby`, `:480-499`)
+## Lobby (`renderLobby`, `:481-500`)
 
-Big room code; seats with a coloured initial, "you"/"host" badges; for bots the host gets a
+Big room code; seats with a coloured initial (or the who's who emoji when the seat has one), "you"/"host" badges; for bots the host gets a
 level `<select>` and a remove button, others see "<level> bot". Add-bot buttons and the
 start button show only for the host; set tiles are disabled for non-hosts; the set's ten
 card names (or "picked at random") are listed. Start is disabled under 2 seats.
 
-## Game (`renderGame`, `:502-572`)
+## Game (`renderGame`, `:503-573`)
 
 Top to bottom:
 - **Top bar**: room code, log, help, menu buttons, then the AirplaneMode home button.
@@ -89,12 +90,12 @@ Top to bottom:
   cost), "Play all money" and "End actions"/"End turn".
 
 Hand interaction: first tap selects and shows the card text; a second tap plays it if
-playable. Moves go through `send(intent)` (`:702-708`), which drops clicks while a request is
+playable. Moves go through `send(intent)` (`:703-709`), which drops clicks while a request is
 in flight, renders the returned state, and on error toasts the message and re-renders.
 
 ## Sheets
 
-- **Decision** (`openDecision`, `:625-645`): opens automatically when `pending.player` is you,
+- **Decision** (`openDecision`, `:626-646`): opens automatically when `pending.player` is you,
   keyed by decision id so it isn't rebuilt on every poll. `select` shows the options as
   cards with a Confirm button labelled with the count ("None" when 0 is allowed); a
   1-of-1 select answers on the first tap. `gain` answers on tap. `yesno` shows `show` cards
@@ -107,7 +108,7 @@ in flight, renders the returned state, and on error toasts the message and re-re
 - **Menu**: "Leave the game" (warns a bot will play your seat).
 - **Help**: the rules summary; **Card**: a big card with text.
 
-## Card rendering (`cardHTML`, `:401-411`)
+## Card rendering (`cardHTML`, `:402-412`)
 
 One function draws every card: class `t-<main type>` (negative > attack > reaction > victory
 > currency > action) picks the colour and glyph, `c-<id>` allows per-card styling (Gold Card,

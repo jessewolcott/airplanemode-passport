@@ -15,8 +15,14 @@ environment notes and `docs/app-contract.md` for the rules.
   everything; decisions with one possible answer are answered automatically.
 - `bots.py`: easy / normal / hard. `Bot.move(game, seat)` returns a legal intent. Bots only use
   what their seat can know. Any bot answer that fails validation falls back to a random legal one.
-- `rooms.py`: rooms, seats, tokens, long-poll versions, the per-room bot task, takeover.
-- `app.py`: the HTTP API (list in its docstring).
+- `rooms.py`: `PassRoom`, built on `amrooms` (the platform's Rooms SDK,
+  `../airplanemode/sdk/rooms`, decision 0022). The SDK does seats, tokens, host (a `Seat`),
+  join/leave/rejoin, presence, long-poll, the driver loop and the registry (`make_rooms()`);
+  `PassRoom` adds the card set, start, moves, the view and the driver's `plan()` (bot moves,
+  takeover of away people, the pause, the `stuck` guard). Settings are `PassRoom.away_after`
+  and `rooms.max_rooms` / `rooms.idle`.
+- `app.py`: the HTTP API (list in its docstring). Calls `whois()` (who's who name and emoji
+  from the admin's `/api/me`) before create/join; runs `rooms.sweep_forever()` in its lifespan.
 
 ## Commands
 
@@ -25,7 +31,10 @@ docker compose up -d --build         # standalone dev: http://localhost:8772
 python tests/test_passport.py        # rules, bots (hundreds of games), rooms, API; CI runs it
 ```
 
-Local tests: `.venv` with Python 3.10 (`fastapi==0.115.6 uvicorn==0.34.0 httpx==0.28.1`).
+Local tests: `.venv` with Python 3.10 (`pip install -r requirements.txt httpx==0.28.1`).
+`requirements.txt` pins `amrooms` from the platform's `rooms-v0.1.1` tag tarball; while
+changing the SDK and this app together, install it editable instead:
+`.venv\Scripts\pip install -e ../airplanemode/sdk/rooms`.
 
 ## Rules the code depends on
 
@@ -43,14 +52,17 @@ Local tests: `.venv` with Python 3.10 (`fastapi==0.115.6 uvicorn==0.34.0 httpx==
   `test_hard_beats_easy_most_of_the_time` and `test_hard_holds_its_own_against_three_normals`.
 - POSTs need `X-Passport: 1`. Page: relative URLs only (a test checks).
 - Bots never run when every person in the room is away (the game pauses).
-- **Leaving sticks:** only `POST join` with the token (`Room.rejoin`) clears `left`. `seen()` (state
-  polls, acts) never does: the page's own poll is in flight when it posts leave.
+- **Leaving sticks:** only `POST join` (the SDK's `join`, with the token or a who's who match)
+  clears `left`. `seen()` (state polls, acts) never does: the page's own poll is in flight
+  when it posts leave.
 - `llm/`: checked-in notes on how it's built (kept out of the image by `.dockerignore`).
 
 ## Untested
 
 - Real phones and the real box (the page was played in a phone-sized desktop Chrome window).
 - Several people on several phones at once (covered by API tests, not by hand).
+- Who's who seat names and getting your seat back from another browser on the same phone
+  (rests on the platform's MAC lookup, decision 0021).
 
 ## Releasing
 

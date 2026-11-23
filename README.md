@@ -73,7 +73,9 @@ Money: **Coins** (cost 0, +1), **Banknotes** (3, +2), **Gold Card** (6, +3).
 - **Play vs bots:** one tap, 1-3 bots (easy, normal or hard) and a card set.
 - **Host a game:** you get a 4-letter code. Others open Passport and join it, or pick it from
   "Games on this hotspot". The host adds bots, picks the card set and starts.
-- Your seat is kept in your browser: a refresh or a locked phone puts you back in it.
+- Your seat is kept in your browser: a refresh or a locked phone puts you back in it. If you
+  picked a name and picture on the AirplaneMode menu, Passport fills in the name, shows your
+  picture on your seat, and another browser on the same phone finds your seat too.
 - **Leaving** a game hands your seat to a bot at once. It stays a bot's until you join the
   same code again from the same browser; if the table starts a rematch first, your seat
   becomes a bot for good.
@@ -115,5 +117,5 @@ Everything lives in memory (rooms, games), so there's no volume. Memory limit 64
 |---|---|---|
 | `PASSPORT_BOT_DELAY` | `0.7-1.2` | seconds a bot waits before each move (`0` in tests) |
 | `PASSPORT_TAKEOVER` | `60` | seconds without hearing from a player before a bot covers their seat |
-| `PASSPORT_ROOM_TTL` | `7200` | seconds before an idle room is forgotten (at most 200 rooms) |
+| `PASSPORT_ROOM_TTL` | `7200` | seconds before an idle room is forgotten (at most 200 rooms; when full, the oldest lobby or finished game makes way) |
 | `PASSPORT_POLL` | `20` | how long a state request waits for something to change |

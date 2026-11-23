@@ -6,12 +6,13 @@
    FastAPI ran it in a worker thread; its `rooms.sweep()` called `Room.ensure_driver()`, whose
    `asyncio.get_running_loop()` raised whenever a bot needed to move and no driver task was
    alive. Fixed: `list_rooms` is `async def` (the sweep runs on the event loop, and no longer
-   mutates `rooms.rooms` from a thread), and `ensure_driver()` returns quietly off the loop.
+   mutates `rooms.rooms` from a thread), and `ensure_driver()` returns quietly off the loop
+   (both kept in `amrooms`).
    Test: `test_lobby_list_with_a_bot_waiting_and_no_driver`.
 2. **Leaving mid-game was undone by the page's own long-poll.** `POST leave` set `left` and
    bumped, which woke the page's in-flight state request, whose handler called `seen()`,
    which cleared `left`. Fixed: `seen()` only refreshes the last-request time; only
-   `Room.rejoin()` (`POST join` with the token) clears `left`. A seat that has left can't
+   `POST join` (now the SDK's `join`, with the token or a who's who match) clears `left`. A seat that has left can't
    `act` or `rematch` (409). So the seat goes to a bot at once, the room can count as empty,
    and the next game makes that seat a bot for good. Test:
    `test_leave_sticks_while_the_page_is_polling` (holds a poll open in a thread).
@@ -39,9 +40,20 @@ Engine:
 Rooms / API:
 - **No persistence.** A container restart drops every room; the page then gets 404 and
   goes home ("That game has ended.").
-- **`touched` only moves on bumps.** A lobby nobody changes is forgotten after 2 h even
-  while polled. The empty-room rule (no person who hasn't left, 60 s idle) is the other way
-  rooms go.
+- **Room mechanics live in `amrooms`** (`../airplanemode/sdk/rooms`). A change to seats,
+  leaving, presence, the driver loop or eviction is an SDK release, a pin bump in
+  `requirements.txt` and an app release (Gate Change uses it too).
+- **`touched` moves on changes and on `seen()` from a seated person who hasn't left** (not
+  spectators, not a leaver's last poll). Empty lobbies go at once; a game everyone left goes
+  60 s after its last change.
+- **The room cap evicts lobbies and finished games** (least recently touched first), never a
+  game in progress; only when all 200 rooms are live games does create answer 503.
+- **Names are unique per room** ("Sam 2"); a rejoin with a name renames the seat.
+- **Who's who** (`whois`, platform decision 0021): a seat takes the person's name (when none
+  is typed) and emoji, and the same person id finds its seat without a token. Labels only.
+  Tests set `ADMIN_URL=""` and replace `passport.whois` to fake it.
+- **The driver's `stuck` guard**: if a bot move and its fallback both fail, `plan()` returns
+  None until the version changes, instead of retrying every 2 s.
 - **Watching is open** (by design, documented in the README and the API docstring): `state`
   with no or a wrong token returns the public view of any room whose code you know (no hand,
   no private decision data).
@@ -49,7 +61,8 @@ Rooms / API:
 - **Removing a bot after a game drops the finished game** (`game = None`), which is also the
   only way to let new people join a room that has played.
 - `bot_delay()` reads the env on every call; the other env vars are read at import (tests
-  patch the module globals `rooms.TAKEOVER_SECONDS`, `rooms.MAX_ROOMS`, `app.POLL_SECONDS`).
+  patch `rooms.PassRoom.away_after`, `passport.rooms.max_rooms`, `passport.rooms.idle` and
+  `app.POLL_SECONDS`).
 - Single process only: the long-poll events and driver tasks live in one event loop.
 
 Page:
@@ -84,12 +97,12 @@ Add it to `Decision.auto`, `validate`, `to_dict` if it has new fields, `random_a
 `Bot.answer`, and `openDecision` + the click handler in the page.
 
 ### Add a lobby option or room setting
-Room field + setter that raises `RoomError(409)` while a game runs and bumps; a new `op` in
+`PassRoom` field + setter that raises `RoomError(409)` while `playing()` and calls `changed()`; a new `op` in
 `app.lobby` (host-only unless there's a reason); include it in `Room.view`; render it in
 `renderLobby`. Add an API test.
 
 ### Add an env var
-Read it at the top of the module, document it in `app.yaml` `env:` and the README settings
+Read it at the top of the module (or as a `PassRoom` class attribute with `env_float`), document it in `app.yaml` `env:` and the README settings
 table, and set it in the platform `compose.yaml` only if the box needs a non-default.
 
 ### Before shipping

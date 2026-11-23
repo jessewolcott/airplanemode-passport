@@ -93,13 +93,13 @@ values for money and VP; Jet Lag is -5.
 ## Helpers
 
 - `random_answer(d, rng)`: a random legal answer for any decision kind. Used as the bot
-  fallback, by `Room._drive`'s fallback, and by the fuzz test.
+  fallback, by `PassRoom._bot_move`'s fallback, and by the fuzz test.
 - `play_bot_game(levels, kingdom, seed)`: plays a bot-only game to the end (20 000 step cap)
   and returns the `Game`. Bot seeds are `seed * 31 + i`. Used by the tests and for tuning.
 
 ## Bots in rooms
 
-`Room.bot_for(i)` creates one `Bot` per seat lazily with a fresh random seed, so room games
+`PassRoom.bot_for(i)` creates one `Bot` per seat lazily with a fresh random seed, so room games
 aren't reproducible from the game seed alone. Taken-over people get a normal bot. Bot seats
-keep their level across rematches; `Room.start` resets `bots`, so plans are rebuilt for the
+keep their level across rematches; `PassRoom.start` resets `bots`, so plans are rebuilt for the
 new kingdom.

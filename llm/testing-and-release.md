@@ -4,9 +4,10 @@
 
 A plain script, no pytest: `python tests/test_passport.py` runs every `test_*` function in
 file order inside one `TestClient(passport.app)` (so the lifespan sweeper runs), prints
-`ok`/`FAIL` with timings, and exits 1 on any failure. It sets `PASSPORT_BOT_DELAY=0` and
-`PASSPORT_POLL=1` before importing the app. API tests share one app and its `rooms`, so
-order matters a little (e.g. the room-cap test sets `MAX_ROOMS` to the current count).
+`ok`/`FAIL` with timings, and exits 1 on any failure. It sets `PASSPORT_BOT_DELAY=0`,
+`PASSPORT_POLL=1` and `ADMIN_URL=""` (no who's who calls) before importing the app. API
+tests share one app and its `rooms`, so order matters a little (e.g. the room-cap test
+discards every room first, then sets `passport.rooms.max_rooms = 2`).
 The whole run took about 4 s locally on 2026-11-22 (all passed).
 
 Helpers: `new_game(n, kingdom, seed)`; `table(hand, ...)` forges an action phase for player 0
@@ -24,7 +25,7 @@ through the API with normal-bot choices.
 | Ending | `test_game_ends_on_visas_and_three_piles`, `test_ties_go_to_fewer_turns_then_share`, `test_round_limit_ends_stalled_games` |
 | Hidden info | `test_views_hide_other_hands`, `test_log_and_public_view_never_leak_hidden_cards` (every step of 40 games, bots plus random moves: each seat's view minus its own hand and decision equals the public view, and every log line names only cards that became public that step or are in play; Hitchhike's kept card and a shown Travel Insurance are the allowed reveals), plus checks inside the attack, Delayed Flight and Window Seat tests |
 | Bots | `test_many_bot_games_end_and_conserve_cards` (300 games: every set x 2-4 players x 25 seeds), `test_random_players_never_break_the_engine` (60 fuzz games), `test_every_bot_answers_every_decision_legally` (spies on `random_answer`: no fallback allowed), `test_hard_beats_easy_most_of_the_time` (>= 75 % per set), `test_hard_holds_its_own_against_three_normals` (>= 33 % of 60, fair share 25 %) |
-| API | `test_page_and_health` (relative URLs, no `http(s)://`, icon type, 31 cards), `test_page_has_airplanemode_home_on_every_screen`, `test_posts_need_the_header`, `test_lobby_join_bots_and_start`, `test_solo_game_vs_bots_long_poll` (poll waits ~1 s when nothing moves, returns at once when behind), `test_leaving_hands_the_seat_to_a_bot_and_coming_back_reclaims_it`, `test_leave_sticks_while_the_page_is_polling` (holds a poll open in a thread, like the page), `test_lobby_list_with_a_bot_waiting_and_no_driver`, `test_idle_players_are_covered_then_reclaim` (patches `TAKEOVER_SECONDS`/`POLL_SECONDS`), `test_everyone_away_pauses_the_game`, `test_unknown_rooms_and_room_cap`, `test_lobby_leave_and_forget` |
+| API | `test_page_and_health` (relative URLs, no `http(s)://`, icon type, 31 cards), `test_page_has_airplanemode_home_on_every_screen`, `test_posts_need_the_header`, `test_lobby_join_bots_and_start`, `test_solo_game_vs_bots_long_poll` (poll waits ~1 s when nothing moves, returns at once when behind), `test_leaving_hands_the_seat_to_a_bot_and_coming_back_reclaims_it` (host role passes on: `room.host.token`), `test_whos_who_names_seats_and_finds_your_seat` (fake `whois`: an empty name takes the who's who name and emoji; the same person without a token gets the same token and seat; a typed name has `avatar` null), `test_leave_sticks_while_the_page_is_polling` (holds a poll open in a thread, like the page), `test_lobby_list_with_a_bot_waiting_and_no_driver`, `test_idle_players_are_covered_then_reclaim` (patches `PassRoom.away_after` and `POLL_SECONDS`), `test_everyone_away_pauses_the_game`, `test_unknown_rooms_and_room_cap` (404s; with `max_rooms = 2` a lobby is evicted for a new game, and 503 only when both rooms are live games), `test_lobby_leave_and_forget` (empty lobby goes on leave; `touched -= rooms.idle + 1` then sweep) |
 
 Not covered: the page's JavaScript (no browser tests), concurrent requests (the test client
 is mostly used sequentially; only the leave test holds a poll open in a thread), real phones.
@@ -33,7 +34,9 @@ is mostly used sequentially; only the leave test holds a poll open in a thread),
 
 - Python 3.10 venv: `py -3.10 -m venv .venv`, then
   `.venv\Scripts\pip install -r requirements.txt httpx==0.28.1` (httpx is for TestClient).
-- `requirements.txt`: `fastapi==0.115.6`, `uvicorn==0.34.0`. Nothing else at runtime.
+- `requirements.txt`: `fastapi==0.115.6`, `uvicorn==0.34.0` and `amrooms` from the
+  platform's `rooms-v0.1.1` tag tarball (it brings httpx). While changing the SDK too:
+  `.venv\Scripts\pip install -e ../airplanemode/sdk/rooms`.
 - Standalone: `docker compose up -d --build` -> http://localhost:8772 (`compose.yaml`:
   project `passport-dev`, port `${PORT:-8772}:8000`, `mem_limit: 64m`). To play several
   seats by hand, use separate browser profiles or private windows (the seat lives in
@@ -71,4 +74,5 @@ tag).
 - Real phones and the real box (NanoPi R6S / GL.iNet); played only in a phone-sized desktop
   Chrome window, against bots.
 - Several people on several phones at once (API tests only).
+- Who's who seat names and finding your seat from another browser on the same phone.
 - Memory use under load on the 48 MB GL.iNet limit.

@@ -71,6 +71,7 @@ h1, h2, h3 { margin: 0; }
 .badge { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; padding: 2px 7px; border-radius: 999px; background: #26324d; color: var(--dim); }
 .badge.gold { background: var(--gold); color: #1b1607; }
 .avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: #111; flex: none; }
+.avatar.emo { font-size: 1.2rem; font-weight: 400; line-height: 1; }
 
 /* ---------- cards ---------- */
 .card {
@@ -482,7 +483,7 @@ function renderLobby(st) {
   $("#lobby-code").textContent = st.code;
   $("#lobby-count").textContent = `(${st.seats.length}/4)`;
   $("#seats").innerHTML = st.seats.map((s, i) => `<div class="seat">
-    <div class="avatar" style="background:${COLORS[i]}">${esc(s.name[0] || "?")}</div>
+    <div class="avatar${s.avatar ? " emo" : ""}" style="background:${COLORS[i]}">${esc(s.avatar || s.name[0] || "?")}</div>
     <div class="who"><b>${esc(s.name)}</b> ${s.you ? '<span class="badge gold">you</span>' : ""} ${s.host ? '<span class="badge">host</span>' : ""}</div>
     ${s.bot ? (st.host ? `<select data-level="${i}" aria-label="Bot level">${["easy", "normal", "hard"].map(l => `<option ${l === s.bot ? "selected" : ""}>${l}</option>`).join("")}</select>
       <button class="btn small ghost" data-remove="${i}" aria-label="Remove bot">✕</button>` : `<span class="badge">${s.bot} bot</span>`) : ""}
@@ -511,7 +512,7 @@ function renderGame(st) {
     const seat = st.seats[i] || {};
     const tags = [i === me ? "you" : "", seat.bot ? seat.bot + " bot" : "", seat.away ? "away · bot playing" : ""].filter(Boolean).join(" · ");
     return `<div class="pl ${i === g.current && !g.over ? "turn" : ""}">
-      <b>${esc(p.name)}</b><span class="vp">${p.vp} VP</span> <span class="muted">· ${p.hand} in hand</span>
+      <b>${seat.avatar ? esc(seat.avatar) + " " : ""}${esc(p.name)}</b><span class="vp">${p.vp} VP</span> <span class="muted">· ${p.hand} in hand</span>
       <div class="tag">deck ${p.deck} · discard ${p.discard} · ${p.owned} cards${tags ? " · " + esc(tags) : ""}</div></div>`;
   }).join("");
 
@@ -812,6 +813,8 @@ async function join(code, token) {
 // ---------------- start ----------------
 (async function boot() {
   $("#name").value = store.get("name") || "";
+  // who's who: the name picked on the AirplaneMode menu (it also labels your seat on the server)
+  fetch("../api/me").then(r => r.ok ? r.json() : null).then(me => { if (me && me.known) $("#name").value = me.name; }).catch(() => {});
   try { const d = await api("api/cards"); CARDS = d.cards; PRESETS = d.presets; }
   catch { toast("Can't reach Passport. Retrying…"); setTimeout(boot, 3000); return; }
   const m = location.hash.match(/^#([A-Za-z]{4})$/);
