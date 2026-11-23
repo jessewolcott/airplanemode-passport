@@ -594,6 +594,16 @@ def test_page_and_health():
     assert len(c.get("/api/cards").json()["cards"]) == 31
 
 
+def test_page_has_airplanemode_home_on_every_screen():
+    html = c.get("/").text
+    home = re.compile(r'<a class="am-home[^"]*" href="\.\./"[^>]*aria-label="AirplaneMode home"')
+    for screen, after in (("home", "lobby"), ("lobby", "game"), ("game", "sheet")):
+        part = html[html.index(f'<div id="{screen}"'):html.index(f'<div id="{after}"')]
+        assert home.search(part), f"no AirplaneMode home link on #{screen}"
+    # coming back from the menu (or the back/forward cache) re-enters the saved room
+    assert 'store.get("room")' in html and '"pageshow"' in html
+
+
 def test_posts_need_the_header():
     r = c.post("/api/rooms", json={"name": "x"})
     assert r.status_code == 403

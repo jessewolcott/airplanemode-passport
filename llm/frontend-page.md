@@ -19,8 +19,25 @@ anywhere in the HTML and absolute `src`/`href`).
 
 Fill the name field; load `api/cards` (on failure: toast "Can't reach Passport. Retrying…"
 and retry in 3 s); a URL hash `#ABCD` pre-fills the join code; if a room is saved, ask
-`state?since=0` and enter it if `you` is set, else forget it; otherwise show home.
-`visibilitychange` restarts polling when the page becomes visible again (a woken phone).
+`state?since=0` and enter it if `you` is set; forget it only on `you: null` or a 404 (any
+other error keeps it, and home shows "Back to your game"); otherwise show home.
+`visibilitychange` restarts polling when the page becomes visible again (a woken phone), and
+so does `pageshow` from the back/forward cache.
+
+Coming back from the AirplaneMode menu is a page load, so boot re-enters the saved room: a
+state request with the token marks the person present again and the bots stop covering
+their seat (they only did after `TAKEOVER_SECONDS`). Going home isn't Leave (`left` stays
+false), so no confirm.
+
+## AirplaneMode home button
+
+`a.am-home` (`href="../"`, app contract item 10) on every screen: fixed at the top right of
+`#home` (`.am-home.float`; `.brand` has 52 px right padding so the title clears it, and a
+smaller title under 420 px), and the last item of the lobby and game top bars. Gold house on
+the panel colour, round like `.iconbtn`, gold focus ring. `z-index: 25` puts it above the
+sheet layer (20), so it stays visible and tappable over every sheet, including the decision
+and results sheets; sheets are capped at `100dvh - 64px` so they start below it.
+`test_page_has_airplanemode_home_on_every_screen` checks each screen has one.
 
 ## Home
 
@@ -54,7 +71,7 @@ card names (or "picked at random") are listed. Start is disabled under 2 seats.
 ## Game (`renderGame`, `:477-547`)
 
 Top to bottom:
-- **Top bar**: room code, log, help, menu buttons.
+- **Top bar**: room code, log, help, menu buttons, then the AirplaneMode home button.
 - **Players strip**: name, VP, hand count, deck/discard/owned counts, tags (you, "<level>
   bot", "away · bot playing"); the current player is outlined.
 - **Phase bar**: Action / Buy steps and the actions/buys/coins counters. (There was a
