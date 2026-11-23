@@ -67,4 +67,4 @@ changing the SDK and this app together, install it editable instead:
 ## Releasing
 
 Push a `vX.Y.Z` tag. CI tests, then publishes `ghcr.io/jessewolcott/airplanemode-passport:X.Y.Z`
-(arm64 + amd64). **Ask Jesse before pushing a release tag.** Released: 0.1.0, 0.1.1 (leaving sticks, lobby list 500 fixed), 0.1.2 (home button) (pinned in the platform's `compose.yaml`).
+(arm64 + amd64). **Ask Jesse before pushing a release tag.** Released: 0.1.0, 0.1.1 (leaving sticks, lobby list 500 fixed), 0.1.2 (home button), 0.2.0 (Rooms SDK, who's who names on seats) (pinned in the platform's `compose.yaml`).
